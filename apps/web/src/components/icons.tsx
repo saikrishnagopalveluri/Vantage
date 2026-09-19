@@ -1,0 +1,111 @@
+import type { SVGProps } from "react";
+
+type P = SVGProps<SVGSVGElement>;
+const base = (props: P) => ({
+  width: 22,
+  height: 22,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+  ...props,
+});
+
+export const FeedIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M4 5h16M4 10h16M4 15h10M4 20h7" />
+  </svg>
+);
+export const CareerIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+);
+export const BookmarkIcon = ({ filled, ...p }: P & { filled?: boolean }) => (
+  <svg {...base(p)} fill={filled ? "currentColor" : "none"}>
+    <path d="M6 3h12v18l-6-4-6 4z" />
+  </svg>
+);
+export const UserIcon = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c1-4 4.5-6 8-6s7 2 8 6" />
+  </svg>
+);
+export const CheckIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+);
+export const CloseIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+export const ExternalIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  </svg>
+);
+export const ShareIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 15V3M8 7l4-4 4 4M5 11v9h14v-9" />
+  </svg>
+);
+
+export const SearchIcon = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M16 16l4.5 4.5" />
+  </svg>
+);
+export const CompassIcon = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M15.5 8.5l-2 5-5 2 2-5z" />
+  </svg>
+);
+export const SunIcon = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" />
+  </svg>
+);
+export const MoonIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z" />
+  </svg>
+);
+export const ArrowIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+);
+export const ChevronIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
+export const TrashIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </svg>
+);
+export const PlusIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+export function Logo({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
+      <rect width="512" height="512" rx="118" fill="#1d1a16" />
+      <path d="M132 176 L256 388 L380 176" fill="none" stroke="#f59e0b" strokeWidth="46" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="256" cy="108" r="28" fill="#f59e0b" />
+    </svg>
+  );
+}

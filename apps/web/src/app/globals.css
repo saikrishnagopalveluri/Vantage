@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/* Warm paper and ink with one amber accent. Ten muted field hues carry meaning, not decoration. */
+:root {
+  --paper: #f6f2ea;
+  --surface: #fffdf8;
+  --sunken: #efe9dd;
+  --ink: #1d1a16;
+  --muted: #625a4f;
+  --line: #e4dccd;
+  --accent: #a94d08;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbead0;
+  --good: #2f6b3a;
+  --good-soft: #e3f0e3;
+  --shadow: 29 26 22;
+  color-scheme: light;
+
+  --d-marketing-bg: #fbead0;      --d-marketing-ink: #944604;
+  --d-finance-bg: #e2efe3;        --d-finance-ink: #2b6136;
+  --d-software-bg: #e5e9f7;       --d-software-ink: #37489a;
+  --d-data-ai-bg: #dbf0ed;        --d-data-ai-ink: #0d6b63;
+  --d-it-security-bg: #f7e2e5;    --d-it-security-ink: #94293a;
+  --d-operations-bg: #f0ebd0;     --d-operations-ink: #6a5716;
+  --d-hr-bg: #f6e2ea;             --d-hr-ink: #9b3b58;
+  --d-sales-bg: #fbe5d8;          --d-sales-ink: #a8451a;
+  --d-product-design-bg: #ebe4f5; --d-product-design-ink: #664198;
+  --d-consulting-bg: #dfeaf4;     --d-consulting-ink: #1f4b74;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14110d;
+    --surface: #1e1a15;
+    --sunken: #100d0a;
+    --ink: #f3ede2;
+    --muted: #b0a696;
+    --line: #362f26;
+    --accent: #f59e0b;
+    --accent-ink: #1d1a16;
+    --accent-soft: #3a2a10;
+    --good: #7fc48a;
+    --good-soft: #1c2e1f;
+    --shadow: 0 0 0;
+    color-scheme: dark;
+
+    --d-marketing-bg: #3a2a12;      --d-marketing-ink: #f3b45a;
+    --d-finance-bg: #1d3022;        --d-finance-ink: #86ce93;
+    --d-software-bg: #232a4a;       --d-software-ink: #9aabf0;
+    --d-data-ai-bg: #143331;        --d-data-ai-ink: #6fd0c6;
+    --d-it-security-bg: #3e1f26;    --d-it-security-ink: #f08ea0;
+    --d-operations-bg: #34301a;     --d-operations-ink: #d6c56a;
+    --d-hr-bg: #3b2029;             --d-hr-ink: #ef9cb6;
+    --d-sales-bg: #3d2517;          --d-sales-ink: #f2a37a;
+    --d-product-design-bg: #2c2340; --d-product-design-ink: #c1a6ee;
+    --d-consulting-bg: #1e3146;     --d-consulting-ink: #8fbbe6;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #14110d;
+  --surface: #1e1a15;
+  --sunken: #100d0a;
+  --ink: #f3ede2;
+  --muted: #b0a696;
+  --line: #362f26;
+  --accent: #f59e0b;
+  --accent-ink: #1d1a16;
+  --accent-soft: #3a2a10;
+  --good: #7fc48a;
+  --good-soft: #1c2e1f;
+  --shadow: 0 0 0;
+  color-scheme: dark;
+
+  --d-marketing-bg: #3a2a12;      --d-marketing-ink: #f3b45a;
+  --d-finance-bg: #1d3022;        --d-finance-ink: #86ce93;
+  --d-software-bg: #232a4a;       --d-software-ink: #9aabf0;
+  --d-data-ai-bg: #143331;        --d-data-ai-ink: #6fd0c6;
+  --d-it-security-bg: #3e1f26;    --d-it-security-ink: #f08ea0;
+  --d-operations-bg: #34301a;     --d-operations-ink: #d6c56a;
+  --d-hr-bg: #3b2029;             --d-hr-ink: #ef9cb6;
+  --d-sales-bg: #3d2517;          --d-sales-ink: #f2a37a;
+  --d-product-design-bg: #2c2340; --d-product-design-ink: #c1a6ee;
+  --d-consulting-bg: #1e3146;     --d-consulting-ink: #8fbbe6;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-source), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-plex), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  background: var(--paper);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  font-feature-settings: "kern", "liga";
+}
+
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+/* Notches, home indicators and rounded corners. */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.px-safe {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+dialog::backdrop { background: rgb(0 0 0 / 0.5); backdrop-filter: blur(2px); }
+
+/* Depth without gradients: a paper edge and a soft cast shadow. */
+.raised {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgb(var(--shadow) / 0.04), 0 14px 28px -22px rgb(var(--shadow) / 0.35);
+}
+
+/* Buttons feel pressed: a lit top edge, a darker base edge, and they sink on click. */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -2px 0 rgb(0 0 0 / 0.2),
+    0 8px 14px -10px var(--accent);
+  transition: transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out), filter 120ms;
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.06); }
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 3px rgb(0 0 0 / 0.25), 0 2px 4px -2px var(--accent);
+}
+
+.btn-raised {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 -2px 0 rgb(var(--shadow) / 0.05), 0 1px 0 rgb(var(--shadow) / 0.04);
+  transition: transform 120ms var(--ease-out), border-color 120ms;
+}
+.btn-raised:hover:not(:disabled) { border-color: var(--muted); }
+.btn-raised:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 2px 3px rgb(var(--shadow) / 0.12); }
+
+/* A recessed track with a thumb that slides between segments. */
+.seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--count, 3), 1fr);
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--sunken);
+  box-shadow: inset 0 1px 3px rgb(var(--shadow) / 0.14);
+}
+.seg-thumb {
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 8px) / var(--count, 3));
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(var(--shadow) / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.5);
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform 320ms var(--ease-out);
+}
+.seg > button { position: relative; z-index: 1; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.rise { animation: rise 320ms var(--ease-out) both; animation-delay: calc(min(var(--n, 0), 8) * 45ms); }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--line) 25%, var(--surface) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rise, .skeleton { animation: none; }
+  .seg-thumb { transition: none; }
+  * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

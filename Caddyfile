@@ -1,0 +1,6 @@
+# Caddy gets and renews the HTTPS certificate on its own for a real domain.
+# DOMAIN comes from .env: a domain name for production, or http://localhost to try it without HTTPS.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
