@@ -25,18 +25,18 @@ PREFIXES = ("aws-0", "aws-1")
 
 
 def classify(message: str) -> str:
-    """What a failed connection tells us: wrong region, right region with a wrong password, or something else."""
+    """What a failed connection tells us: wrong region, right region with a refused password, or something else."""
     text = message.lower()
-    if "tenant or user not found" in text:
-        return "wrong-region"
     if "password authentication failed" in text or "authentication failed" in text:
-        return "wrong-password"
+        return "right-region"
+    if "tenant/user" in text or "tenant or user not found" in text or "enotfound" in text:
+        return "wrong-region"
     return "other"
 
 
-def try_host(host: str, ref: str, password: str, connect=psycopg.connect) -> tuple[str, str]:
+def try_host(host: str, ref: str, password: str, connect=psycopg.connect, timeout: int = 8) -> tuple[str, str]:
     try:
-        with connect(host=host, port=5432, user=f"postgres.{ref}", password=password, dbname="postgres", connect_timeout=6):
+        with connect(host=host, port=5432, user=f"postgres.{ref}", password=password, dbname="postgres", connect_timeout=timeout):
             return host, "ok"
     except psycopg.Error as exc:
         return host, classify(str(exc))
@@ -44,15 +44,16 @@ def try_host(host: str, ref: str, password: str, connect=psycopg.connect) -> tup
         return host, f"other:{exc}"
 
 
-def find_pooler(ref: str, password: str, connect=psycopg.connect) -> tuple[str | None, str]:
-    """Returns (host, "ok"), or (host, "wrong-password") when the region is right but the password is not,
-    or (None, "not-found") when no region answers."""
+def find_pooler(ref: str, connect=psycopg.connect) -> str | None:
+    """Which pooler host serves this project. Asks every region with a throwaway password: only the
+    project's own region answers "password authentication failed", the rest say they don't know the project.
+    Your real password is never sent to a region that isn't yours."""
     hosts = [f"{p}-{r}.pooler.supabase.com" for p in PREFIXES for r in REGIONS]
     with ThreadPoolExecutor(max_workers=12) as pool:
-        for host, status in pool.map(lambda h: try_host(h, ref, password, connect), hosts):
-            if status in ("ok", "wrong-password"):
-                return host, status
-    return None, "not-found"
+        for host, status in pool.map(lambda h: try_host(h, ref, "not-the-real-password", connect), hosts):
+            if status == "right-region":
+                return host
+    return None
 
 
 def main(argv: list[str]) -> None:
@@ -61,17 +62,21 @@ def main(argv: list[str]) -> None:
     parser.add_argument("--replace", action="store_true", help="empty the tables in Supabase first")
     args = parser.parse_args(argv)
 
-    password = getpass.getpass("Supabase database password (hidden): ")
     print("Looking for your project's region ...")
-    host, status = find_pooler(args.ref, password)
+    host = find_pooler(args.ref)
     if host is None:
         raise SystemExit(
-            "No Supabase pooler answered for that project ref. Check the ref (the part before .supabase.co) "
+            "No Supabase pooler recognised that project ref. Check the ref (the part before .supabase.co) "
             "and that the project is not paused."
         )
-    if status == "wrong-password":
-        raise SystemExit(f"Found your project at {host}, but the password was refused. Check it, or reset it in Supabase.")
     print(f"Found it: {host}")
+
+    password = getpass.getpass("Supabase database password (hidden): ")
+    print("Checking the password (this can take a few seconds) ...")
+    _, status = try_host(host, args.ref, password, timeout=45)
+    if status != "ok":
+        hint = "the password was refused. Check it, or reset it in Supabase." if status == "right-region" else f"the connection failed ({status})."
+        raise SystemExit(f"Found your project at {host}, but {hint}")
 
     session_url = f"postgresql://postgres.{args.ref}:{quote(password, safe='')}@{host}:5432/postgres"
     from app import copy_db

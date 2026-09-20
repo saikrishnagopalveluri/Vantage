@@ -147,23 +147,24 @@ def test_the_region_finder_reads_supabase_errors_correctly():
 
     from app.supabase_load import classify, find_pooler
 
+    assert classify('FATAL:  password authentication failed for user "postgres.abc"') == "right-region"
+    assert classify('FATAL:  (ENOTFOUND) tenant/user postgres.abc not found') == "wrong-region"
     assert classify("FATAL:  Tenant or user not found") == "wrong-region"
-    assert classify('FATAL:  password authentication failed for user "postgres.abc"') == "wrong-password"
     assert classify("connection timed out") == "other"
 
-    def fake(right_host, message=None):
-        def connect(host, **_):
+    def fake(right_host):
+        seen_passwords = []
+
+        def connect(host, password, **_):
+            seen_passwords.append((host, password))
             if host == right_host:
-                if message:
-                    raise psycopg.OperationalError(message)
-                import contextlib
+                raise psycopg.OperationalError('FATAL:  password authentication failed for user "postgres.abc"')
+            raise psycopg.OperationalError("FATAL:  (ENOTFOUND) tenant/user postgres.abc not found")
 
-                return contextlib.nullcontext()
-            raise psycopg.OperationalError("FATAL:  Tenant or user not found")
-
+        connect.seen = seen_passwords
         return connect
 
-    assert find_pooler("abc", "pw", fake("aws-0-ap-south-1.pooler.supabase.com")) == ("aws-0-ap-south-1.pooler.supabase.com", "ok")
-    host, status = find_pooler("abc", "bad", fake("aws-1-eu-west-2.pooler.supabase.com", "password authentication failed"))
-    assert (host, status) == ("aws-1-eu-west-2.pooler.supabase.com", "wrong-password")
-    assert find_pooler("abc", "pw", fake("nowhere.example")) == (None, "not-found")
+    connect = fake("aws-0-ap-northeast-1.pooler.supabase.com")
+    assert find_pooler("abc", connect) == "aws-0-ap-northeast-1.pooler.supabase.com"
+    assert {password for _, password in connect.seen} == {"not-the-real-password"}  # the real one is never sent while searching
+    assert find_pooler("abc", fake("nowhere.example")) is None

@@ -1,5 +1,5 @@
 {
   "builds": [{ "src": "index.py", "use": "@vercel/python", "config": { "maxLambdaSize": "250mb" } }],
   "routes": [{ "src": "/(.*)", "dest": "index.py" }],
-  "regions": ["bom1"]
+  "regions": ["hnd1"]
 }

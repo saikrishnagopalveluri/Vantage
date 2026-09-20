@@ -59,7 +59,7 @@ Row level security matters here: Supabase publishes the tables of the `public` s
 | `VANTAGE_SCHEDULER` | `0` |
 | `VANTAGE_OPERATOR_NAME`, `VANTAGE_CONTACT_EMAIL`, `VANTAGE_GRIEVANCE_OFFICER` | for the Terms and Privacy pages |
 
-`apps/api/vercel.json` points every route at `index.py` and asks for the Mumbai region (`bom1`). Change `regions` to sit next to your Supabase region; the API makes many small queries, so distance shows.
+`apps/api/vercel.json` points every route at `index.py` and asks for the Tokyo region (`hnd1`, next to a Supabase project in ap-northeast-1). Change `regions` to sit next to your Supabase region; the API makes many small queries, so distance shows.
 
 **3. Web (Vercel project 2).** Import the repo again, set **Root Directory** to `apps/web`, and add `BACKEND_URL` = the API project's production URL (for example `https://vantage-api.vercel.app`). The address is baked in at build time, so redeploy after changing it. The browser only talks to the web project, which forwards `/api/*` to the API, so there is no CORS setup and the login cookie stays on one domain. Keep Deployment Protection off for the API's production URL, or the web project can't reach it.
 
