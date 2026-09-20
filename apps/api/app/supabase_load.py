@@ -11,6 +11,7 @@ import argparse
 import getpass
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from urllib.parse import quote
 
 import psycopg
@@ -22,6 +23,7 @@ REGIONS = [
     "sa-east-1", "me-central-1", "il-central-1", "af-south-1",
 ]
 PREFIXES = ("aws-0", "aws-1")
+LOCAL_DB = Path(__file__).resolve().parents[1] / "vantage.db"
 
 
 def classify(message: str) -> str:
@@ -60,6 +62,7 @@ def main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ref", required=True, help="your project ref, the part before .supabase.co")
     parser.add_argument("--replace", action="store_true", help="empty the tables in Supabase first")
+    parser.add_argument("--from", dest="source", default=None, help="database to copy from (default: the local vantage.db file)")
     args = parser.parse_args(argv)
 
     print("Looking for your project's region ...")
@@ -87,7 +90,11 @@ def main(argv: list[str]) -> None:
 
     url = normalize_url(session_url)
     add_missing_columns(create_engine(url, **engine_options(url, False)))
-    copy_db.main(["--to", session_url, *(["--replace"] if args.replace else [])])
+    # Always the local file unless told otherwise, whatever DATABASE_URL happens to be set to in this shell.
+    source = args.source or f"sqlite:///{LOCAL_DB.as_posix()}"
+    if not args.source and not LOCAL_DB.exists():
+        raise SystemExit(f"There is no local database at {LOCAL_DB}. Run this from a checkout that has one, or pass --from.")
+    copy_db.main(["--from", source, "--to", session_url, *(["--replace"] if args.replace else [])])
 
     print("\nFor Vercel and GitHub, use the Transaction pooler string. It is the same but with port 6543:")
     print(f"  postgresql://postgres.{args.ref}:[YOUR-PASSWORD]@{host}:6543/postgres")
