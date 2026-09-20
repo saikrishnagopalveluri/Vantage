@@ -12,8 +12,9 @@ import sys
 
 from sqlalchemy import create_engine, delete, func, select
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 
-from app.db import DATABASE_URL, engine_options, normalize_url
+from app.db import DATABASE_URL, check_url, engine_options, normalize_url
 from app.migrate import secure_postgres
 from app.models import Article, ArticleTag, Base, Source
 
@@ -69,13 +70,16 @@ def main(argv: list[str]) -> None:
     parser.add_argument("--replace", action="store_true", help="empty the target tables first")
     args = parser.parse_args(argv)
 
-    source_url, target_url = normalize_url(args.source), normalize_url(args.target)
+    source_url, target_url = normalize_url(check_url(args.source)), normalize_url(check_url(args.target))
     if source_url == target_url:
         raise SystemExit("The source and the target are the same database.")
     source = create_engine(source_url, **engine_options(source_url, False))
     target = create_engine(target_url, **engine_options(target_url, False))
     print(f"Copying {source.url.render_as_string(hide_password=True)} -> {target.url.render_as_string(hide_password=True)}")
-    copied = copy_database(source, target, include_users=args.include_users, replace=args.replace)
+    try:
+        copied = copy_database(source, target, include_users=args.include_users, replace=args.replace)
+    except OperationalError as exc:
+        raise SystemExit(f"Could not use the database: {str(exc.orig or exc).splitlines()[0]}")
     print(f"Done: {sum(copied.values()):,} rows in {len(copied)} tables.")
     print(f"Row level security enabled on {secure_postgres(target)} tables.")
 

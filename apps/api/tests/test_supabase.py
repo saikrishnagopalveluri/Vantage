@@ -125,3 +125,18 @@ def test_demo_stories_are_not_copied_to_a_real_database(tmp_path):
         assert [a.title for a in db.scalars(select(Article))] == ["A real story"]
         assert [s.name for s in db.scalars(select(Source))] == ["Mint - Companies"]
         assert db.scalar(select(func.count()).select_from(ArticleTag)) == 0
+
+
+def test_a_pasted_connection_string_with_a_placeholder_or_a_raw_at_sign_gets_a_clear_message():
+    from app.db import check_url
+
+    with pytest.raises(SystemExit, match="placeholder"):
+        check_url("postgresql://postgres.abc:pw@aws-0-<region>.pooler.supabase.com:5432/postgres")
+    with pytest.raises(SystemExit, match="placeholder"):
+        check_url("postgresql://postgres.abc:[YOUR-PASSWORD]@host:5432/postgres")
+    with pytest.raises(SystemExit, match="URL-encoded"):
+        check_url("postgresql://postgres.abc:pass@1@host:5432/postgres")
+    with pytest.raises(SystemExit, match="no database URL"):
+        check_url("")
+    assert check_url("postgresql://postgres.abc:pa%401@host:5432/postgres").startswith("postgresql://")
+    assert check_url("sqlite:///./vantage.db") == "sqlite:///./vantage.db"

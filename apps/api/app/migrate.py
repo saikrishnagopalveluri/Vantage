@@ -54,8 +54,14 @@ def secure_postgres(engine: Engine) -> int:
 if __name__ == "__main__":
     # `python -m app.migrate` creates any missing tables and columns. Run it once against a new database,
     # or set VANTAGE_SKIP_DDL=1 on a serverless host, where doing it on every cold start would be slow.
-    from app.db import engine
+    from sqlalchemy.exc import OperationalError
 
-    Base.metadata.create_all(engine)
+    from app.db import DATABASE_URL, check_url, engine
+
+    check_url(DATABASE_URL)
+    try:
+        Base.metadata.create_all(engine)
+    except OperationalError as exc:
+        raise SystemExit(f"Could not use the database: {str(exc.orig or exc).splitlines()[0]}")
     print("Tables ready. Added columns:", add_missing_columns(engine) or "none")
     print("Row level security enabled on", secure_postgres(engine), "tables")

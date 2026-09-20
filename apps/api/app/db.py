@@ -13,6 +13,23 @@ def normalize_url(url: str) -> str:
     return url
 
 
+def check_url(url: str) -> str:
+    """Catch the two usual mistakes when pasting a connection string, with a message that says what to fix."""
+    if not url:
+        raise SystemExit("There is no database URL. Set DATABASE_URL, or pass one with --to.")
+    if "<" in url or ">" in url or "[YOUR" in url.upper() or "PASSWORD]" in url.upper():
+        raise SystemExit(
+            "The database URL still has a placeholder in it (something in < > or [ ]). "
+            "Copy the real string from Supabase (Connect button) and replace only the password."
+        )
+    if url.startswith("postgres") and url.split("://", 1)[1].count("@") > 1:
+        raise SystemExit(
+            "The database URL has more than one @. If your password contains @, # / : or ?, write it URL-encoded "
+            "(@ becomes %40, # becomes %23, / becomes %2F, : becomes %3A, ? becomes %3F)."
+        )
+    return url
+
+
 DATABASE_URL = normalize_url(os.getenv("DATABASE_URL") or "sqlite:///./vantage.db")  # empty counts as unset
 # Vercel runs each request in short-lived functions, so a pool of open connections only wastes them.
 SERVERLESS = bool(os.getenv("VERCEL"))
