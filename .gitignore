@@ -11,3 +11,7 @@ playwright-report/
 
 .env
 *.db.bak*
+
+# Local env files hold secrets. Only the example is committed.
+.env.*
+!.env.example

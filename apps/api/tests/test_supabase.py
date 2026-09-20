@@ -168,3 +168,19 @@ def test_the_region_finder_reads_supabase_errors_correctly():
     assert find_pooler("abc", connect) == "aws-0-ap-northeast-1.pooler.supabase.com"
     assert {password for _, password in connect.seen} == {"not-the-real-password"}  # the real one is never sent while searching
     assert find_pooler("abc", fake("nowhere.example")) is None
+
+
+def test_the_vercel_env_file_is_complete_and_keeps_its_signing_key(tmp_path):
+    from app.vercel_env import TEMPLATE, existing_secret, transaction_url
+
+    url = transaction_url("abc", "aws-0-ap-northeast-1.pooler.supabase.com", "p@ss:w/rd#1")
+    assert url == "postgresql://postgres.abc:p%40ss%3Aw%2Frd%231@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres"
+    from app.db import check_url
+
+    assert check_url(url) == url  # what we write is what the app accepts
+    path = tmp_path / ".env.vercel"
+    path.write_text(TEMPLATE.format(database_url=url, secret="s" * 64), encoding="utf-8")
+    assert existing_secret(path) == "s" * 64
+    assert existing_secret(tmp_path / "missing") is None
+    text = path.read_text(encoding="utf-8")
+    assert "VANTAGE_SKIP_DDL=1" in text and "VANTAGE_SCHEDULER=0" in text
