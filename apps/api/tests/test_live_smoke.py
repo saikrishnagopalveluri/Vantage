@@ -103,8 +103,7 @@ def test_LIVE_skill_searches(http, q):
     assert http.get("/api/taxonomy/capabilities", params={"q": q, "limit": 10}).json()
 
 
-@pytest.mark.xfail(strict=True, reason="FINDING: search has no spelling variants or abbreviations, so UK/India spellings and acronyms find nothing")
-@pytest.mark.parametrize("q", ["modelling", "DCF", "MS Excel"])
+@pytest.mark.parametrize("q", ["modelling", "DCF", "MS Excel", "Microsoft Excel", "organisational"])
 def test_LIVE_skill_search_spelling_variants_and_acronyms(http, q):
     assert http.get("/api/taxonomy/capabilities", params={"q": q, "limit": 10}).json()
 
