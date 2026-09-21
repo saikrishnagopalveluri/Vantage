@@ -5,6 +5,7 @@ import { timeAgo } from "@/lib/format";
 import { DomainBadge } from "@/lib/domains";
 import type { FeedItem, Tier } from "@/lib/types";
 import { BookmarkIcon, ChevronIcon, CloseIcon, ExternalIcon } from "./icons";
+import { ListenControls } from "./listen-controls";
 import { Button, Chip, cx } from "./ui";
 
 const TIER_LABEL: Record<Tier, string> = {
@@ -48,6 +49,7 @@ function Brief({ item }: { item: FeedItem }) {
   }
   return (
     <div className="space-y-3.5 text-[15px] leading-relaxed">
+      <ListenControls id={item.id} title={item.title} brief={brief} />
       {brief.paragraphs.map((p) => (
         <p key={p}>{p}</p>
       ))}

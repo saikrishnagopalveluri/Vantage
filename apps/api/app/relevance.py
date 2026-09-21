@@ -2,8 +2,16 @@
 scoring function never asks "is this a student?": it asks what the status says to weight.
 
 A dimension's match is a strength in [0, 1]: 1.0 when the entity is named in the headline,
-lower when only the teaser names it. The score is the weighted strength over the dimensions the
-profile has data for, so a user with no targets isn't capped by dimensions they can't match.
+lower when only the teaser names it. Only the dimensions the profile has data for count, so a user
+with no targets isn't capped by dimensions they can't match.
+
+Each matched dimension is independent evidence. A weighted average made a story about a target
+company look weak (25 of 100) because it said nothing about the other four dimensions; here one
+strong match is enough to be worth reading, and every further match raises the score further:
+
+    score = 1 - product(1 - CONFIDENCE * strength * weight / top_weight)
+
+scaled so that matching every dimension the profile has data for is 100.
 """
 
 from collections.abc import Collection, Mapping
@@ -34,6 +42,13 @@ WEIGHTS: dict[ProfileStatus, dict[str, int]] = {
     },
 }
 
+# One perfect match on the profile's most important dimension is worth this much on its own.
+CONFIDENCE = 0.75
+# A perfect match on a profile with very few dimensions should not be stretched all the way to 100.
+FULL_MATCH_FLOOR = 0.9
+# A skill the reader already has is less useful news than one they are missing.
+OWNED_SKILL_FACTOR = 0.6
+
 RECENCY_HALF_LIFE_DAYS = 7.0
 RECENCY_FLOOR = 0.5
 
@@ -50,6 +65,7 @@ class ProfileTags:
     target_companies: frozenset[str] = frozenset()
     target_industries: frozenset[str] = frozenset()
     capabilities: frozenset[str] = frozenset()
+    owned_capabilities: frozenset[str] = frozenset()  # the part of `capabilities` the reader already has
     domains: frozenset[str] = frozenset()
 
 
@@ -82,6 +98,12 @@ def _matches(profile: ProfileTags, article: ArticleTags) -> dict[str, float | No
     def multi(values: frozenset[str], tags: Tags) -> float | None:
         return None if not values else _strength(tags, values)
 
+    def skills() -> float | None:
+        if not profile.capabilities:
+            return None
+        missing = profile.capabilities - profile.owned_capabilities
+        return max(_strength(article.capabilities, missing), OWNED_SKILL_FACTOR * _strength(article.capabilities, profile.owned_capabilities))
+
     return {
         "current_role": single(profile.current_role, article.roles),
         "current_company": single(profile.current_company, article.companies),
@@ -89,7 +111,7 @@ def _matches(profile: ProfileTags, article: ArticleTags) -> dict[str, float | No
         "target_role": multi(profile.target_roles, article.roles),
         "target_company": multi(profile.target_companies, article.companies),
         "target_industry": multi(profile.target_industries, article.industries),
-        "capability": multi(profile.capabilities, article.capabilities),
+        "capability": skills(),
         "domain": multi(profile.domains, article.domains),
     }
 
@@ -106,6 +128,11 @@ def score_article(
     }
     if not applicable:
         return 0.0
-    earned = sum(w * (matches[dim] or 0.0) for dim, w in applicable.items())
-    base = 100 * earned / sum(applicable.values())
-    return round(base * recency_multiplier(age_days), 1)
+    top = max(applicable.values())
+    missed = missed_if_perfect = 1.0
+    for dim, weight in applicable.items():
+        evidence = CONFIDENCE * weight / top
+        missed_if_perfect *= 1 - evidence
+        missed *= 1 - evidence * (matches[dim] or 0.0)
+    base = 100 * (1 - missed) / max(1 - missed_if_perfect, FULL_MATCH_FLOOR)
+    return round(min(base, 100.0) * recency_multiplier(age_days), 1)

@@ -21,6 +21,7 @@ from app.models import (
     RoleCapability,
     TagType,
 )
+from app.search_terms import variants
 from app.schemas import (
     ArticleBrief,
     CapabilityRef,
@@ -67,15 +68,20 @@ def _brief(hit: SearchHit) -> ArticleBrief:
     )
 
 
+def _match(column, q: str):
+    """Contains the query or one of its other spellings and expansions (modelling, DCF, MS Excel)."""
+    return or_(*(column.icontains(v, autoescape=True) for v in variants(q)))
+
+
 def _relevance(column, q: str | None, boost=None):
     """Order matches so a prefix beats a mid-word hit, then what management students want first,
     then shorter (more specific) names."""
     first = [boost.desc()] if boost is not None else []
     if not q:
         return [*first, column]
-    lowered = q.lower()
+    starts = or_(*(func.lower(column).like(f"{v}%") for v in variants(q)))
     return [
-        case((func.lower(column).like(f"{lowered}%"), 0), else_=1),
+        case((starts, 0), else_=1),
         *first,
         func.length(column),
         column,
@@ -114,7 +120,7 @@ def roles(
     """Curated roles and role families first, then the long tail of title variants."""
     stmt = select(Role).options(selectinload(Role.domain), selectinload(Role.parent))
     if q:
-        stmt = stmt.where(Role.title.icontains(q, autoescape=True))
+        stmt = stmt.where(_match(Role.title, q))
     if domain_id:
         stmt = stmt.where(Role.domain_id == domain_id)
     if families_only:
@@ -238,7 +244,7 @@ def companies(
     if domain_id:
         stmt = companies_hiring_domain(domain_id).options(selectinload(Company.industry))
     if q:
-        stmt = stmt.where(Company.name.icontains(q, autoescape=True))
+        stmt = stmt.where(_match(Company.name, q))
     if industry_id:
         stmt = stmt.where(Company.industry_id == industry_id)
     if mba:
@@ -295,7 +301,7 @@ def capabilities(
 ):
     stmt = select(Capability).options(selectinload(Capability.domain))
     if q:
-        stmt = stmt.where(Capability.name.icontains(q, autoescape=True))
+        stmt = stmt.where(_match(Capability.name, q))
     if kind:
         stmt = stmt.where(Capability.kind == kind)
     if domain_id:
@@ -316,7 +322,7 @@ def search(q: str = Query(min_length=2, max_length=80), db: Session = Depends(ge
             role_ref(r)
             for r in db.scalars(
                 select(Role)
-                .where(Role.title.icontains(q, autoescape=True))
+                .where(_match(Role.title, q))
                 .options(selectinload(Role.domain), selectinload(Role.parent))
                 .order_by(case((Role.parent_id.is_(None), 0), else_=1), *_relevance(Role.title, q))
                 .limit(8)
@@ -326,7 +332,7 @@ def search(q: str = Query(min_length=2, max_length=80), db: Session = Depends(ge
             _company_out(c)
             for c in db.scalars(
                 select(Company)
-                .where(Company.name.icontains(q, autoescape=True))
+                .where(_match(Company.name, q))
                 .options(selectinload(Company.industry))
                 .order_by(case((Company.source == "curated", 0), else_=1), *_relevance(Company.name, q))
                 .limit(8)
@@ -336,7 +342,7 @@ def search(q: str = Query(min_length=2, max_length=80), db: Session = Depends(ge
             capability_ref(c)
             for c in db.scalars(
                 select(Capability)
-                .where(Capability.name.icontains(q, autoescape=True))
+                .where(_match(Capability.name, q))
                 .options(selectinload(Capability.domain))
                 .order_by(case((Capability.source == "curated", 0), else_=1), *_relevance(Capability.name, q))
                 .limit(8)

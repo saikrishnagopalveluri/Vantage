@@ -14,7 +14,7 @@ const plex = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Vantage", template: "%s · Vantage" },
+  title: { default: "Vantage · Career news that fits you", template: "%s · Vantage" },
   description: "Technology, career and industry news, ranked for you, with why it matters.",
   applicationName: "Vantage",
   appleWebApp: { capable: true, title: "Vantage", statusBarStyle: "default" },

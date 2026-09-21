@@ -54,23 +54,26 @@ def act(client, article, action, user="u1"):
 
 def test_for_you_is_ranked_by_relevance_with_tiers(client, feed_world):
     body = fetch(client)
-    assert set(urls(body)[:2]) == {"hul", "bm"} and urls(body)[2:] == ["amazon", "excel"]  # first two tie
-    assert [i["tier"] for i in body["items"]] == ["relevant", "relevant", "relevant", "explore"]
-    assert body["summary"] == {"total": 4, "critical": 0, "relevant": 3, "explore": 1}
+    assert set(urls(body)[:2]) == {"hul", "bm"} and urls(body)[2:] == ["amazon", "excel"]
+    # Two matches (a role or company plus a missing skill) are critical; a company alone is relevant.
+    assert [i["tier"] for i in body["items"]] == ["critical", "critical", "relevant", "explore"]
+    assert body["summary"] == {"total": 4, "critical": 2, "relevant": 1, "explore": 1}
     scores = [i["score"] for i in body["items"]]
     assert scores == sorted(scores, reverse=True)
-    assert scores[0] == 60.0  # company 25 + industry 15 + capability 20, of 100 across five dimensions
+    assert scores[2] >= 40 > scores[3]  # a headline naming a target company is worth reading
 
 
 def test_why_this_matters_is_grounded_in_matches(client, feed_world):
     by = {i["url"].rsplit("/", 1)[1]: i for i in fetch(client)["items"]}
     hul, bm, amazon, excel = by["hul"], by["bm"], by["amazon"], by["excel"]
     assert hul["why_this_matters"].startswith("HUL is one of your target companies.")
-    assert hul["action"].startswith("Try Power BI")
+    assert "Power BI shows up in requirements" in hul["why_this_matters"]
+    assert hul["action"]  # the exact advice depends on what the headline is about; see tests/test_why.py
     assert hul["matched"]["capabilities"] == ["Power BI"]
     assert "Brand Manager" in bm["why_this_matters"]
     assert amazon["why_this_matters"].startswith("Amazon is one of your target companies.")
     assert excel["why_this_matters"] == "It relates to Excel, which you already have."
+    assert "Excel" in excel["action"]
 
 
 def test_untagged_articles_never_appear(client, feed_world):

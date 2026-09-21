@@ -203,7 +203,7 @@ The browser only talks to the Next.js origin. `/api/*` is proxied to the API (`B
 ## Tests
 
 ```bash
-cd apps/api && .venv/Scripts/python -m pytest      # about 190 tests, under a minute
+cd apps/api && .venv/Scripts/python -m pytest      # about 650 tests, around 2.5 minutes
 cd apps/web && npm run typecheck && npm run lint
 cd apps/web && npm run e2e                          # Playwright, needs both servers running
 node scripts/pwa-check.mjs online                   # manifest, icons, service worker, caches
@@ -212,6 +212,16 @@ node scripts/pwa-check.mjs online                   # manifest, icons, service w
 `npm run e2e` drives the Chrome installed on your machine, so there is no browser download. It covers onboarding, the four-field limit, the hidden-until-opened summaries, saving, the Explore flow, job descriptions, search, the theme switch and the "I got the job" flow on a desktop and a phone profile, and it runs an axe accessibility scan on each main page.
 
 `pwa-check.mjs` has a second phase: stop the web server and run `offline` to confirm the last feed still renders.
+
+The full plan, what each suite covers and what is not covered yet are in [docs/TEST_PLAN.md](docs/TEST_PLAN.md). `apps/api/tests/test_live_smoke.py` checks a deployed site without changing anything (set `VANTAGE_LIVE_WEB`), and `.github/workflows/tests.yml` runs the API tests, type check, lint and build on every push.
+
+## Ranking, wording and reading aloud
+
+A story's score adds up its matches instead of averaging them: naming a company you target is enough to be worth reading, and each further match (a role, a skill you lack) raises it. A skill you already have counts for less than one you are missing, a company's industry is not counted a second time, sources with more authority count slightly more, and stock tips and market-holiday notices are pushed down.
+
+"Why it matters to you" and "What to do" follow the kind of story, read from the headline (leadership change, deal, results, hiring, policy, launch, expansion, technology, markets). Both lines only use things that were actually matched.
+
+Inside an opened summary, **Listen** reads the headline, the summary and the pointers aloud with the browser's own speech engine, so nothing leaves your device. Choose a female or male voice and the speed. Browsers do not say whether a voice is male or female, so the app reads it from the voice's name. If your device has no voice of the kind you pick, it says so and changes the pitch of the closest one.
 
 ## How accurate is it
 

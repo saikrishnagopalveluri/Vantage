@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.relevance import ArticleTags, ProfileTags, score_article
 from app.hiring import canonical
+from app.story import is_low_value, story_kind
 from app.why import Matched, explain
 
 Lens = Literal["for_you", "companies", "skills"]
@@ -43,8 +44,16 @@ WINDOW_DAYS = 45
 MAX_CANDIDATES = 600
 CRITICAL_MIN = 70.0
 RELEVANT_MIN = 40.0
-# Below this an article is noise for this reader, however many things it loosely touches.
-MIN_SCORE = 12.0
+# Below this an article is noise for this reader, however many things it loosely touches. A story that
+# only shares a field of work with the reader scores about 25, so it stays out unless something else matches.
+MIN_SCORE = 25.0
+# Stories from better sources count a little more: 1 -> 0.97, 3 -> 1.03, 5 -> 1.09.
+AUTHORITY_BASE = 0.94
+AUTHORITY_STEP = 0.03
+# Stock tips and holiday notices name companies without saying anything useful for a career.
+LOW_VALUE_FACTOR = 0.6
+# Share-price commentary is worth less to a career reader than a deal, a result or a leadership change.
+MARKETS_FACTOR = 0.85
 
 # Behavioural learning: what a reader saves, opens and dismisses nudges similar stories.
 SAVED_SIGNAL = 1.0
@@ -89,6 +98,8 @@ class Context:
     names: dict[str, str]  # id -> display name, for every entity that can be matched
     domain_of: dict[str, str] = field(default_factory=dict)  # role/capability/topic id -> domain id
     signals: Counter = field(default_factory=Counter)  # (TagType, ref_id) -> +liked / -disliked
+    kinds: dict[str, str] = field(default_factory=dict)  # skill id -> "tool" or "skill"
+    company_industry: dict[str, str] = field(default_factory=dict)  # company id -> its industry id
 
 
 def load_context(db: Session, profile: UserProfile) -> Context:
@@ -133,8 +144,11 @@ def load_context(db: Session, profile: UserProfile) -> Context:
         names[role.id] = role.title
         if role.domain_id or role.parent_id:
             domain_of[role.id] = role.domain_id or db.get(Role, role.parent_id).domain_id
+    company_industry: dict[str, str] = {}
     for company in company_rows:
         names[company.id] = company.name
+        if company.industry_id:
+            company_industry[company.id] = company.industry_id
 
     # The domains a reader cares about: those they follow, plus those of the roles they want or hold.
     domains = set(followed_domains) | {domain_of[r] for r in role_ids if r in domain_of}
@@ -147,6 +161,7 @@ def load_context(db: Session, profile: UserProfile) -> Context:
         target_companies=frozenset(target_companies),
         target_industries=frozenset(i for i in target_industries if i),
         capabilities=frozenset(wanted | owned),
+        owned_capabilities=frozenset(owned),
         domains=frozenset(domains),
     )
     return Context(
@@ -158,6 +173,7 @@ def load_context(db: Session, profile: UserProfile) -> Context:
         target_company_ids=frozenset(target_companies),
         names=names,
         domain_of=domain_of,
+        company_industry=company_industry,
         signals=_behaviour_signals(db, user_id),
     )
 
@@ -172,6 +188,10 @@ def hydrate(db: Session, ctx: "Context", ids: set[str]) -> None:
                 ctx.names[row.id] = getattr(row, attr)
                 if model in (Role, Capability, Topic) and row.domain_id:
                     ctx.domain_of[row.id] = row.domain_id
+                if model is Capability:
+                    ctx.kinds[row.id] = row.kind.value
+                if model is Company and row.industry_id:
+                    ctx.company_industry[row.id] = row.industry_id
 
 
 def _behaviour_signals(db: Session, user_id: str) -> Counter:
@@ -295,12 +315,15 @@ def rank(
         published = article.published_at
         if published.tzinfo is None:
             published = published.replace(tzinfo=timezone.utc)
+        # A story about a company is tagged with that company's industry too. That is the same fact,
+        # not a second reason to read it, so only an industry the story names on its own counts.
+        implied = {ctx.company_industry[c] for c in t[TagType.COMPANY] if c in ctx.company_industry}
         score = score_article(
             cur,
             ArticleTags(
                 roles=t[TagType.ROLE],
                 companies=t[TagType.COMPANY],
-                industries=t[TagType.INDUSTRY],
+                industries={i: w for i, w in t[TagType.INDUSTRY].items() if i not in implied},
                 capabilities=t[TagType.CAPABILITY],
                 domains=article_domains,
             ),
@@ -310,6 +333,12 @@ def rank(
         if score <= 0:
             continue
         protected = bool(t[TagType.COMPANY].keys() & ctx.company_ids)
+        score *= AUTHORITY_BASE + AUTHORITY_STEP * article.source.authority
+        kind = story_kind(article.title)
+        if is_low_value(article.title):
+            score *= LOW_VALUE_FACTOR
+        elif kind == "markets":
+            score *= MARKETS_FACTOR
         score = round(min(100.0, max(0.0, score + _behaviour_adjustment(ctx, t, protected))), 1)
         if score < MIN_SCORE:
             continue
@@ -320,12 +349,13 @@ def rank(
             target_companies=names(t[TagType.COMPANY].keys() & ctx.target_company_ids),
             target_roles=names(t[TagType.ROLE].keys() & cur.target_roles),
             gap_capabilities=names(t[TagType.CAPABILITY].keys() & gaps),
+            gap_kinds={ctx.names[i]: ctx.kinds[i] for i in t[TagType.CAPABILITY].keys() & gaps if i in ctx.names and i in ctx.kinds},
             owned_capabilities=names(t[TagType.CAPABILITY].keys() & ctx.owned),
             industries=names(t[TagType.INDUSTRY].keys() & (cur.target_industries | ({cur.current_industry} - {None}))),
             topics=names(t[TagType.TOPIC].keys() & {i for i in t[TagType.TOPIC] if ctx.domain_of.get(i) in cur.domains}),
             domains=names(article_domains.keys() & cur.domains),
         )
-        explained = explain(ctx.status, matched)
+        explained = explain(ctx.status, matched, kind)
         if explained is None:
             continue
         why, action = explained

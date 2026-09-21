@@ -1,0 +1,77 @@
+# Runs the tests on every push and pull request, so a change that breaks sign-in, the feed or the
+# build is caught before it reaches Vercel.
+#
+# To also smoke-test a deployed site (read-only), run this workflow by hand and give it the web URL.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      live_url:
+        description: "Web address to smoke-test after a deploy, for example https://vantage-web-vert.vercel.app"
+        default: ""
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      VANTAGE_SECRET: ci-only-signing-key-not-used-anywhere-else
+      VANTAGE_SCHEDULER: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q -p no:warnings
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run build
+
+  live-smoke:
+    if: ${{ github.event.inputs.live_url != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+      - run: pip install -r requirements.txt
+      # Read-only. The one test that creates and deletes an account needs VANTAGE_LIVE_WRITE=1 and is left off.
+      - run: python -m pytest tests/test_live_smoke.py -q -p no:warnings
+        env:
+          VANTAGE_LIVE_WEB: ${{ github.event.inputs.live_url }}
