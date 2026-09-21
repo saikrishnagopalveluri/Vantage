@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useOnline } from "@/lib/hooks";
 import type { Profile } from "@/lib/types";
 import { BookmarkIcon, CareerIcon, CompassIcon, FeedIcon, Logo, SearchIcon, UserIcon } from "./icons";
+import { OPEN_QUIZ_EVENT, useMultiTap } from "@/lib/triple-tap";
+import { PartnerBadge } from "./partner-badge";
 import { SearchPalette } from "./search-palette";
 import { Skeleton, cx } from "./ui";
+
+// The game is only downloaded when someone opens it.
+const QuizGame = dynamic(() => import("./quiz-game").then((m) => m.QuizGame), { ssr: false });
 
 const NAV = [
   { href: "/feed", label: "Feed", Icon: FeedIcon },
@@ -28,6 +34,9 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
   const pathname = usePathname();
   const online = useOnline();
   const [searching, setSearching] = useState(false);
+  const [quiz, setQuiz] = useState(false);
+  const openQuiz = useCallback(() => setQuiz(true), []);
+  const onLogo = useMultiTap(openQuiz); // tap the logo three times
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   useEffect(() => {
@@ -40,14 +49,18 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
+    window.addEventListener(OPEN_QUIZ_EVENT, openQuiz);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener(OPEN_QUIZ_EVENT, openQuiz);
+    };
+  }, [openQuiz]);
 
   return (
     <div className="min-h-dvh md:pl-64">
       {/* Desktop and tablet sidebar */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-line bg-paper px-4 py-6 md:flex">
-        <Link href="/feed" className="mb-6 flex items-center gap-3 px-2">
+        <Link href="/feed" onClick={onLogo} className="mb-6 flex touch-manipulation select-none items-center gap-3 px-2">
           <Logo size={32} />
           <span className="font-display text-2xl">Vantage</span>
         </Link>
@@ -85,13 +98,16 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
             </div>
           )}
         </div>
+        <PartnerBadge size="sm" className="mt-4 px-1" />
       </aside>
 
       {/* Mobile top bar */}
       <header className="pt-safe sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur md:hidden">
         <div className="px-safe flex h-12 items-center gap-2.5">
-          <Logo size={26} />
-          <span className="font-display text-xl">Vantage</span>
+          <Link href="/feed" onClick={onLogo} aria-label="Vantage home" className="flex touch-manipulation select-none items-center gap-2.5">
+            <Logo size={26} />
+            <span className="font-display text-xl">Vantage</span>
+          </Link>
           <button
             onClick={() => setSearching(true)}
             aria-label="Search"
@@ -137,6 +153,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       </nav>
 
       <SearchPalette open={searching} onClose={() => setSearching(false)} />
+      {quiz && profile && <QuizGame userId={profile.user_id} onClose={() => setQuiz(false)} />}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { chunk, pickVoice, scriptFor, speakable, voiceGender } from "../src/lib/speech";
+import { SAMPLE, chunk, pickVoice, scriptFor, speakable, upgradeTip, voiceGender, voiceOptions, voiceQuality } from "../src/lib/speech";
 
 /** A voice as the browser reports it; only the fields the picker reads. */
 const v = (name: string, lang: string, isDefault = false) => ({ name, lang, default: isDefault, localService: true, voiceURI: name }) as SpeechSynthesisVoice;
@@ -378,6 +378,195 @@ test.describe("listening to a summary", () => {
     const card = await openFirstSummary(page);
     await card.getByRole("button", { name: "Listen to the summary and pointers" }).click();
     const results = await new AxeBuilder({ page }).include("article").analyze();
+    expect(results.violations.filter((x) => x.impact === "serious" || x.impact === "critical")).toEqual([]);
+  });
+});
+
+
+// ---- nicer voices -------------------------------------------------------------------------------------------------------
+
+const vv = (name: string, lang = "en-US", localService = true) => ({ name, lang, default: false, localService, voiceURI: name }) as SpeechSynthesisVoice;
+
+test.describe("voice quality", () => {
+  const cases: [string, boolean, string][] = [
+    ["Microsoft Aria Online (Natural) - English (United States)", false, "natural"],
+    ["Microsoft Prabhat Online (Natural) - English (India)", false, "natural"],
+    ["en-US-Neural2-F", true, "natural"],
+    ["Ava (Premium)", true, "enhanced"],
+    ["Samantha (Enhanced)", true, "enhanced"],
+    ["Siri Female (United States)", true, "enhanced"],
+    ["Google UK English Female", false, "network"],
+    ["Google US English", true, "network"],
+    ["English India", false, "network"],
+    ["Microsoft Zira - English (United States)", true, "basic"],
+    ["Microsoft David Desktop - English (United States)", true, "basic"],
+    ["eSpeak English", true, "basic"],
+  ];
+  for (const [name, local, quality] of cases) {
+    test(`${name} is ${quality}`, () => {
+      expect(voiceQuality({ name, localService: local })).toBe(quality);
+    });
+  }
+
+  test("a natural voice beats an online one, which beats a basic one, whatever the accent", () => {
+    const basic = vv("Microsoft Heera - English (India)", "en-IN");
+    const online = vv("Google UK English Female", "en-GB", false);
+    const natural = vv("Microsoft Aria Online (Natural) - English (United States)", "en-US", false);
+    expect(pickVoice([basic, online], "female").voice).toBe(online);
+    expect(pickVoice([basic, online, natural], "female").voice).toBe(natural);
+  });
+
+  test("Indian English breaks a tie between voices of the same quality", () => {
+    const us = vv("Microsoft Aria Online (Natural) - English (United States)", "en-US", false);
+    const india = vv("Microsoft Neerja Online (Natural) - English (India)", "en-IN", false);
+    expect(pickVoice([us, india], "female").voice).toBe(india);
+  });
+
+  test("the old built-in desktop voices come last", () => {
+    const desktop = vv("Microsoft Zira Desktop - English (United States)", "en-US");
+    const plain = vv("Microsoft Zira - English (United States)", "en-US");
+    expect(pickVoice([desktop, plain], "female").voice).toBe(plain);
+  });
+
+  test("a voice the reader picked by name is used even if a better one exists", () => {
+    const basic = vv("Microsoft Zira - English (United States)");
+    const natural = vv("Microsoft Aria Online (Natural) - English (United States)", "en-US", false);
+    expect(pickVoice([basic, natural], "female", "Microsoft Zira - English (United States)").voice).toBe(basic);
+    expect(pickVoice([basic, natural], "female", "Microsoft Zira - English (United States)").approximated).toBe(false);
+  });
+
+  test("a voice that has since gone, or is not English, falls back to the best one", () => {
+    const natural = vv("Microsoft Aria Online (Natural) - English (United States)", "en-US", false);
+    const hindi = vv("Google हिन्दी", "hi-IN", false);
+    expect(pickVoice([natural, hindi], "female", "A voice that was uninstalled").voice).toBe(natural);
+    expect(pickVoice([natural, hindi], "female", "Google हिन्दी").voice).toBe(natural);
+  });
+
+  test("the picker lists voices best first, matching the gender, then the ones that do not say", () => {
+    const voices = [
+      vv("Microsoft Zira - English (United States)"),
+      vv("Microsoft Aria Online (Natural) - English (United States)", "en-US", false),
+      vv("Microsoft David - English (United States)"),
+      vv("Google US English", "en-US", false),
+      vv("Google हिन्दी", "hi-IN", false),
+    ];
+    const female = voiceOptions(voices, "female");
+    expect(female.matching.map((o) => o.name)).toEqual(["Microsoft Aria Online (Natural) - English (United States)", "Microsoft Zira - English (United States)"]);
+    expect(female.matching[0].label).toContain("natural");
+    expect(female.other.map((o) => o.name)).toEqual(["Google US English"]);
+    expect(voiceOptions(voices, "male").matching.map((o) => o.name)).toEqual(["Microsoft David - English (United States)"]);
+    expect([...female.matching, ...female.other].some((o) => o.name.includes("हिन्दी"))).toBe(false); // English only
+  });
+
+  test("labels are short enough to read in a menu", () => {
+    const [o] = voiceOptions([vv("Microsoft Aria Online (Natural) - English (United States)", "en-US", false)], "female").matching;
+    expect(o.label).toBe("Aria (en-US, natural)");
+  });
+
+  const uas: [string, RegExp][] = [
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", /Spoken Content/],
+    ["Mozilla/5.0 (Linux; Android 14; Pixel 7)", /Text-to-speech/],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605", /System Settings/],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Edg/120", /Narrator/],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120 Safari/537", /Microsoft Edge/],
+  ];
+  for (const [ua, expected] of uas) {
+    test(`the tip for ${ua.slice(13, 40)} mentions ${expected.source}`, () => {
+      expect(upgradeTip(ua)).toMatch(expected);
+    });
+  }
+
+  test("no tip text uses a dash or a list of three", () => {
+    for (const [ua] of uas) expect(upgradeTip(ua)).not.toMatch(/\u2014|\u2013/);
+  });
+});
+
+const NATURAL = [
+  { name: "Microsoft Aria Online (Natural) - English (United States)", lang: "en-US" },
+  { name: "Microsoft Jenny Online (Natural) - English (United States)", lang: "en-US" },
+  { name: "Microsoft Guy Online (Natural) - English (United States)", lang: "en-US" },
+  { name: "Microsoft Ryan Online (Natural) - English (United Kingdom)", lang: "en-GB" },
+];
+
+test.describe("choosing a voice", () => {
+  test("the menu offers voices for the chosen gender, best first, and the reading uses the pick", async ({ page }) => {
+    await fakeSpeech(page, [...WINDOWS.map((w) => ({ name: w.name, lang: w.lang })), ...NATURAL]);
+    const card = await openFirstSummary(page);
+    const menu = card.locator("select").filter({ hasText: "Best available" });
+    await expect(menu.locator("option").first()).toHaveText("Best available");
+    await expect(menu.locator('optgroup[label="Female voices"] option').first()).toContainText("natural");
+    await menu.selectOption({ label: "Jenny (en-US, natural)" });
+    await card.getByRole("button", { name: "Listen to the summary and pointers" }).click();
+    const spoken = await page.evaluate(() => window.__spoken);
+    expect(new Set(spoken.map((x) => x.voice))).toEqual(new Set(["Microsoft Jenny Online (Natural) - English (United States)"]));
+  });
+
+  test("each gender remembers its own voice, across a reload", async ({ page }) => {
+    await fakeSpeech(page, NATURAL);
+    let card = await openFirstSummary(page);
+    const menu = () => card.locator("select").filter({ hasText: "Best available" });
+    await menu().selectOption({ label: "Jenny (en-US, natural)" });
+    await card.getByRole("button", { name: "Male", exact: true }).click();
+    await expect(menu()).toHaveValue(""); // nothing picked for male yet
+    await menu().selectOption({ label: "Ryan (en-GB, natural)" });
+    await page.reload();
+    card = page.locator("article").first();
+    await card.getByRole("button", { name: "Summary and pointers" }).click();
+    await expect(menu()).toHaveValue("Microsoft Ryan Online (Natural) - English (United Kingdom)");
+    await card.getByRole("button", { name: "Female", exact: true }).click();
+    await expect(menu()).toHaveValue("Microsoft Jenny Online (Natural) - English (United States)");
+  });
+
+  test("'Best available' clears a pick", async ({ page }) => {
+    await fakeSpeech(page, NATURAL);
+    const card = await openFirstSummary(page);
+    const menu = card.locator("select").filter({ hasText: "Best available" });
+    await menu.selectOption({ label: "Jenny (en-US, natural)" });
+    await menu.selectOption("");
+    await card.getByRole("button", { name: "Listen to the summary and pointers" }).click();
+    const spoken = await page.evaluate(() => window.__spoken);
+    expect(spoken[0].voice).toContain("Online (Natural)");
+    await expect(menu).toHaveValue("");
+  });
+
+  test("changing the voice while it is reading carries on in the new one", async ({ page }) => {
+    await fakeSpeech(page, NATURAL);
+    const card = await openFirstSummary(page);
+    await card.getByRole("button", { name: "Listen to the summary and pointers" }).click();
+    await page.evaluate(() => (window.__spoken.length = 0));
+    await card.locator("select").filter({ hasText: "Best available" }).selectOption({ label: "Jenny (en-US, natural)" });
+    const spoken = await page.evaluate(() => window.__spoken);
+    expect(spoken.length).toBeGreaterThan(0);
+    expect(new Set(spoken.map((x) => x.voice))).toEqual(new Set(["Microsoft Jenny Online (Natural) - English (United States)"]));
+  });
+
+  test("Hear it says one short sample in the current voice and leaves the story alone", async ({ page }) => {
+    await fakeSpeech(page, NATURAL);
+    const card = await openFirstSummary(page);
+    await card.locator("select").filter({ hasText: "Best available" }).selectOption({ label: "Jenny (en-US, natural)" });
+    await card.getByRole("button", { name: "Hear a sample of this voice" }).click();
+    const spoken = await page.evaluate(() => window.__spoken);
+    expect(spoken).toHaveLength(1);
+    expect(spoken[0]).toMatchObject({ text: SAMPLE, voice: "Microsoft Jenny Online (Natural) - English (United States)" });
+    await expect(card.getByRole("button", { name: "Listen to the summary and pointers" })).toBeVisible(); // the story is not playing
+  });
+
+  test("a tip about nicer voices shows only when the voice in use is a plain built-in one", async ({ page }) => {
+    await fakeSpeech(page, [{ name: "Microsoft Zira - English (United States)", lang: "en-US" }]);
+    const card = await openFirstSummary(page);
+    await expect(card.getByText(/For nicer voices/)).toBeVisible();
+  });
+
+  test("no tip when a natural voice is in use", async ({ page }) => {
+    await fakeSpeech(page, NATURAL);
+    const card = await openFirstSummary(page);
+    await expect(card.getByText(/For nicer voices/)).toHaveCount(0);
+  });
+
+  test("the menu, the sample button and the tip have no serious accessibility violations", async ({ page }) => {
+    await fakeSpeech(page, [{ name: "Microsoft Zira - English (United States)", lang: "en-US" }, ...NATURAL]);
+    await openFirstSummary(page);
+    const results = await new AxeBuilder({ page }).include("article").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
     expect(results.violations.filter((x) => x.impact === "serious" || x.impact === "critical")).toEqual([]);
   });
 });

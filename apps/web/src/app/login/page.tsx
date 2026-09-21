@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { ConsentFields } from "@/components/consent-fields";
 import { Logo } from "@/components/icons";
+import { PartnerBadge } from "@/components/partner-badge";
 import { Button, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
 import { setUserId } from "@/lib/session";
@@ -162,6 +163,7 @@ function LoginForm() {
             Privacy
           </Link>
         </p>
+        <PartnerBadge size="sm" className="justify-center pt-2" />
       </div>
     </main>
   );

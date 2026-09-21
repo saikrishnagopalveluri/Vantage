@@ -126,3 +126,26 @@ export const StopIcon = (p: P) => (
     <rect x="6" y="6" width="12" height="12" rx="1.5" />
   </svg>
 );
+
+export const HeartIcon = ({ filled, ...p }: P & { filled?: boolean }) => (
+  <svg {...base(p)} fill={filled ? "currentColor" : "none"}>
+    <path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0112 7.6a4.3 4.3 0 017.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" />
+  </svg>
+);
+export const MuteIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" />
+    <path d="M16 9.5l5 5M21 9.5l-5 5" />
+  </svg>
+);
+export const DownloadIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 4v11M8 11l4 4 4-4M5 19h14" />
+  </svg>
+);
+export const CopyIcon = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="8" y="8" width="11" height="12" rx="2" />
+    <path d="M5 15V6a2 2 0 012-2h8" />
+  </svg>
+);

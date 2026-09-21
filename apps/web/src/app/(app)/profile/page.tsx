@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DomainGrid } from "@/components/domain-grid";
 import { EntityPicker, fromCapability, fromCompany, fromRole, type PickItem } from "@/components/entity-picker";
 import { InstallCard } from "@/components/install-card";
+import { PartnerBadge } from "@/components/partner-badge";
 import { useProfile } from "@/components/profile-context";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
@@ -13,6 +14,7 @@ import { useAsync } from "@/lib/hooks";
 import Link from "next/link";
 import { clearSession, isAccount, rememberDeletion } from "@/lib/session";
 import { setTheme, useTheme, type Theme } from "@/lib/theme";
+import { openQuiz } from "@/lib/triple-tap";
 import type { Profile } from "@/lib/types";
 
 function PlacementSheet({ profile, open, onClose }: { profile: Profile; open: boolean; onClose: () => void }) {
@@ -400,12 +402,23 @@ export default function ProfilePage() {
       <InstallCard />
 
       <Card>
+        <h2 className="font-display text-xl">Pop quiz</h2>
+        <p className="mt-2 text-[15px] text-muted">
+          Questions from your own fields, roles and companies, plus a few management basics. Keep going until you get three wrong. It gets harder as you go, and you can post your score when you are done.
+        </p>
+        <Button variant="primary" className="mt-3" onClick={openQuiz}>
+          Play the pop quiz
+        </Button>
+      </Card>
+
+      <Card>
         <h2 className="font-display text-xl">About the data</h2>
         <p className="mt-2 text-[15px] text-muted">
           Job titles, tools and skills include information from the O*NET 31.0 Database by the U.S. Department of Labor, Employment and
           Training Administration, used under the CC BY 4.0 license. Company names come from SEC EDGAR, the NSE equity list and Wikidata.
           Skill lists describe typical US jobs, so treat them as a starting point.
         </p>
+        <PartnerBadge className="mt-4 border-t border-line pt-4" />
       </Card>
 
       <YourDataCard />

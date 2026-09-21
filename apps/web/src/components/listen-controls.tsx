@@ -8,6 +8,7 @@ import {
   isSupported,
   pause,
   pickVoice,
+  preview,
   restart,
   resume,
   scriptFor,
@@ -18,6 +19,9 @@ import {
   usePrefs,
   useSpeaking,
   useVoicesReady,
+  upgradeTip,
+  voiceOptions,
+  voiceQuality,
   type Gender,
 } from "@/lib/speech";
 import { PauseIcon, SpeakerIcon, StopIcon } from "./icons";
@@ -40,10 +44,12 @@ export function ListenControls({ id, title, brief }: { id: string; title: string
   // Stop reading when the summary is closed or the card goes away.
   useEffect(() => () => stopIfPlaying(id), [id]);
 
-  const picked = useMemo(
-    () => (supported && voicesReady ? pickVoice(window.speechSynthesis.getVoices(), prefs.gender) : null),
-    [supported, voicesReady, prefs.gender],
-  );
+  const chosen = prefs.voices?.[prefs.gender];
+  const voices = useMemo(() => (supported && voicesReady ? window.speechSynthesis.getVoices() : []), [supported, voicesReady]);
+  const picked = useMemo(() => (voices.length ? pickVoice(voices, prefs.gender, chosen) : null), [voices, prefs.gender, chosen]);
+  const options = useMemo(() => voiceOptions(voices, prefs.gender), [voices, prefs.gender]);
+  // Worth a tip when the voice being used is one of the plain built-in ones.
+  const basic = picked?.voice ? voiceQuality(picked.voice) === "basic" : false;
 
   if (!supported) {
     return <p className="text-sm text-muted">Listening isn&apos;t available in this browser. Try Chrome, Edge or Safari.</p>;
@@ -58,6 +64,7 @@ export function ListenControls({ id, title, brief }: { id: string; title: string
     const merged = setPrefs(next);
     if (mine) restart(merged);
   };
+  const pickVoiceByName = (name: string) => choose({ voices: { [prefs.gender]: name || undefined } });
 
   const label = status === "playing" ? "Pause" : status === "paused" ? "Resume" : "Listen";
 
@@ -95,6 +102,40 @@ export function ListenControls({ id, title, brief }: { id: string; title: string
             </button>
           ))}
         </div>
+        {(options.matching.length > 0 || options.other.length > 0) && (
+          <label className="inline-flex max-w-full items-center gap-1.5 text-sm text-muted">
+            Voice
+            <select
+              value={chosen && [...options.matching, ...options.other].some((o) => o.name === chosen) ? chosen : ""}
+              onChange={(e) => pickVoiceByName(e.target.value)}
+              className="min-h-10 max-w-[15rem] rounded-lg border border-line bg-surface px-2 text-[15px] text-ink"
+            >
+              <option value="">Best available</option>
+              {options.matching.length > 0 && (
+                <optgroup label={prefs.gender === "female" ? "Female voices" : "Male voices"}>
+                  {options.matching.map((o) => (
+                    <option key={o.name} value={o.name}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {options.other.length > 0 && (
+                <optgroup label="Other voices">
+                  {options.other.map((o) => (
+                    <option key={o.name} value={o.name}>
+                      {o.label}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
+        )}
+        <Button onClick={() => preview(prefs)} variant="ghost" aria-label="Hear a sample of this voice" className="px-3.5">
+          <SpeakerIcon width={16} height={16} />
+          Hear it
+        </Button>
         <label className="inline-flex items-center gap-1.5 text-sm text-muted">
           Speed
           <select
@@ -111,6 +152,7 @@ export function ListenControls({ id, title, brief }: { id: string; title: string
         </label>
       </div>
       {picked && !picked.voice && <p className="text-sm text-muted">This device has no English voice installed, so it can&apos;t read aloud.</p>}
+      {basic && <p className="text-sm text-muted">{upgradeTip(navigator.userAgent)}</p>}
       {picked?.voice && picked.approximated && (
         <p className="text-sm text-muted">
           This device has no {prefs.gender} English voice, so the closest one is used at a different pitch.

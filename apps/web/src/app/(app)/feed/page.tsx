@@ -17,6 +17,7 @@ const LENSES: { id: Lens; label: string }[] = [
   { id: "for_you", label: "For you" },
   { id: "companies", label: "Companies" },
   { id: "skills", label: "Skills" },
+  { id: "newsletters", label: "Newsletters" },
 ];
 
 const EMPTY_COPY: Record<Lens, { title: string; body: string }> = {
@@ -31,6 +32,10 @@ const EMPTY_COPY: Record<Lens, { title: string; body: string }> = {
   skills: {
     title: "No skill news right now",
     body: "Stories about skills and tools you haven't picked up yet will show up here.",
+  },
+  newsletters: {
+    title: "No newsletter posts match you yet",
+    body: "We read Substack and other independent newsletters on technology, strategy, finance and product, and keep the posts that fit your fields, roles and companies. New ones arrive through the day.",
   },
 };
 

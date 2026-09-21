@@ -15,7 +15,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal, engine
-from app.models import Article, ArticleTag, Base, Source, UserInteraction
+from app.models import Article, ArticleTag, Base, Source, TagType, UserInteraction
+from app.seed_data.sources import NEWSLETTER_NAMES
 from app.summarize import build_brief
 from app.tagging import TagIndex, build_index, is_relevant_enough, tag_article
 
@@ -55,9 +56,15 @@ def clean_body(raw: str | None) -> str:
 def parse_feed(content: str | bytes) -> list[FeedEntry]:
     entries = []
     now = datetime.now(timezone.utc)
-    for item in feedparser.parse(content).entries:
+    parsed = feedparser.parse(content)
+    site = (parsed.feed.get("link") or "").strip()
+    for item in parsed.entries:
         title = (item.get("title") or "").strip()
         url = (item.get("link") or "").strip()
+        if not url and site and item.get("id") and item.get("enclosures"):
+            # A podcast feed: episodes have audio but no page of their own, so link to the show's site
+            # and keep the episode id in the fragment, which keeps each episode's address unique.
+            url = f"{site.rstrip('/')}/#{item['id']}"
         # The link is rendered as <a href>; a feed must not be able to smuggle in javascript: or data: URLs.
         if not title or not url or urlparse(url).scheme not in ("http", "https"):
             continue
@@ -77,6 +84,16 @@ def parse_feed(content: str | bytes) -> list[FeedEntry]:
     return entries
 
 
+def tag_story(index: TagIndex, source_name: str, title: str, summary: str, body: str = "") -> tuple[dict, bool]:
+    """Tags for a story, and whether it is relevant enough to keep. A newsletter essay often has a
+    metaphorical headline and a one-line teaser, so it is read on its opening text too, and a single real
+    match is enough. News keeps the stricter rule."""
+    letter = source_name in NEWSLETTER_NAMES
+    tags = tag_article(index, title, f"{summary} {body[:1200]}" if letter else summary)
+    keep = is_relevant_enough(tags) or (letter and any(tag[0] != TagType.INDUSTRY for tag in tags))
+    return tags, keep
+
+
 def ingest_entries(
     db: Session, source: Source, entries: list[FeedEntry], index: TagIndex | None = None
 ) -> int:
@@ -89,8 +106,8 @@ def ingest_entries(
     for entry in entries:
         if entry.url in known:
             continue
-        tags = tag_article(index, entry.title, entry.summary)
-        if not is_relevant_enough(tags):
+        tags, keep = tag_story(index, source.name, entry.title, entry.summary, entry.body)
+        if not keep:
             continue
         known.add(entry.url)
         article = Article(
@@ -120,8 +137,8 @@ def retag_all(db: Session) -> dict[str, int]:
     touched = {i for i in db.scalars(select(UserInteraction.article_id))}
     kept = removed = 0
     for article in db.scalars(select(Article)):
-        tags = tag_article(index, article.title, article.summary)
-        if not is_relevant_enough(tags) and article.id not in touched:
+        tags, keep = tag_story(index, article.source.name, article.title, article.summary, article.body or "")
+        if not keep and article.id not in touched:
             db.execute(delete(ArticleTag).where(ArticleTag.article_id == article.id))
             db.delete(article)
             removed += 1

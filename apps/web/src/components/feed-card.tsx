@@ -94,6 +94,7 @@ export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onO
         ))}
       </div>
       <p className="mt-2 text-xs text-muted">
+        {item.newsletter && <span className="mr-1.5 rounded border border-line px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Newsletter</span>}
         {item.source.name} · {timeAgo(item.published_at)}
       </p>
 

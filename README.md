@@ -5,20 +5,37 @@ Vantage reads business and tech news and tells you why each story matters to you
 - `apps/api`: FastAPI and SQLAlchemy. SQLite locally, portable to Postgres.
 - `apps/web`: Next.js 16 PWA. Installable, works offline, designed for phones first.
 
+
+Powered by DOT Club, IBS Hyderabad. The logo is in `apps/web/public/partners/` and the credit is one component, `apps/web/src/components/partner-badge.tsx`, used on the home, login, profile and shared-score pages, in the desktop sidebar and on the quiz intro.
+
 ## What it covers
 
 Twenty-four fields of work, from Marketing, Finance, Sales and HR through Software, Data and AI, Digital Transformation, Platform Businesses and B2B, to Healthcare, Legal, Education, Trades, Agriculture, Hospitality and Creative work. A reader follows up to four.
 
 | | Count | Where it comes from |
 | --- | --- | --- |
-| Roles and job titles | about 45,000 | 317 hand-written roles (niche ones like Actuarial Analyst and Compiler Engineer), 1,002 O*NET occupations, and about 44,000 real job titles that point back at the occupation they belong to |
-| Companies | about 22,000 | 395 hand-written, then SEC filers (about 7,900), NSE-listed firms (about 2,500) and listed companies from Wikidata across 42 countries (about 11,000) |
-| Skills and tools | about 2,100 | 551 hand-written and the tools O*NET lists for each occupation |
+| Roles and job titles | about 45,000 | 351 hand-written roles (niche ones like Actuarial Analyst and Compiler Engineer), 1,002 O*NET occupations, and about 44,000 real job titles that point back at the occupation they belong to |
+| Companies | about 22,000 | 507 hand-written, then SEC filers (about 7,900), NSE-listed firms (about 2,500) and listed companies from Wikidata across 42 countries (about 11,000) |
+| Skills and tools | about 2,100 | 561 hand-written and the tools O*NET lists for each occupation |
 | News topics | 172 | Hand-written |
 
 Only the hand-written roles, skills and companies, plus imported company names that are distinctive enough (for example "Reliance Industries" but not "First Bank"), are used to tag news. The rest are there to search, pick and compare, so 45,000 titles can't drown the feed in false matches.
 
-News comes from about 90 official RSS feeds. We store the headline, link, publisher, a 300-character teaser and up to 1,600 characters of the feed's own text, which is used only to build the expandable summary. We never store full articles. Many publishers only share a headline and a teaser in their feed. For those, the summary says so and links to the article.
+News comes from about 195 official RSS and Atom feeds, 25 of them newsletters (see below). We store the headline, link, publisher, a 300-character teaser and up to 1,600 characters of the feed's own text, which is used only to build the expandable summary. We never store full articles. Many publishers only share a headline and a teaser in their feed. For those, the summary says so and links to the article.
+
+### Consulting, IT services and digital transformation
+
+The firms a management student meets are covered in depth: the Big 4 and the mid-tier accounting and advisory firms (Grant Thornton, BDO, RSM, Forvis Mazars and others), the strategy houses (McKinsey, BCG, Bain, Kearney, Oliver Wyman, Simon-Kucher, AlixPartners and more), HR and talent consultancies (Mercer, Aon, WTW, Korn Ferry), research firms (Gartner, IDC, Forrester, Everest, Zinnov), the IT services companies (Cognizant, LTIMindtree, Mphasis, Persistent, Coforge, Thoughtworks, Publicis Sapient and more) and the platforms digital transformation is built on. Common sub-brands are aliases, so a headline that says "Deloitte India" or "EY-Parthenon" is found. Consulting and transformation roles run from Associate Consultant to Partner, and from Digital Transformation Consultant to Presales Consultant. The new lists are in `apps/api/app/seed_data/expansion.py`.
+
+Big 4, IT services and many consulting firms publish no feed of their own, so their news comes through Google News searches (official RSS) in `seed_data/sources.py`. A few sites block automated readers (Tech Brew, Morning Brew, Technology Magazine, Reuters and others), and those are left out rather than worked around. Morning Brew Daily is a podcast feed with no page per episode, so its stories link to the show's site.
+
+### Newsletters
+
+The Feed has a **Newsletters** tab. It reads Substack and other independent newsletters on technology, strategy, finance, product and India (Lenny's Newsletter, Not Boring, The Generalist, The Pragmatic Engineer, Platformer, Net Interest, The Daily Brief by Zerodha, Finshots, The Playbook by Morning Brew and others). A newsletter essay often has a metaphorical headline, so its opening text is read too and one real match keeps it, and the tab lets weaker matches in. The list is `NEWSLETTERS` in `seed_data/sources.py`; add a name and feed there and run `python -m app.seed --sync`.
+
+### Pop quiz
+
+Tap the Vantage logo three times (or use **Play the pop quiz** on the Profile page). Questions are made from the taxonomy, real headlines with the company blanked out, and a hand-written bank of management basics in `seed_data/quiz_concepts.py`, and lean towards the player's own roles, companies and fields. The game runs until three wrong answers, gets harder every four right ones, and has a clock, streaks, sound (off with one tap) and a review of what was missed. A finished game can be posted: a shareable link (`/quiz/share`) with a preview picture for LinkedIn, X and WhatsApp, a downloadable card, and the phone's own share sheet. A post shows only the score and a title, never a name or profile. The questions come from `GET /quiz/{user_id}`.
 
 ### Summaries and pointers
 
@@ -221,7 +238,7 @@ A story's score adds up its matches instead of averaging them: naming a company 
 
 "Why it matters to you" and "What to do" follow the kind of story, read from the headline (leadership change, deal, results, hiring, policy, launch, expansion, technology, markets). Both lines only use things that were actually matched.
 
-Inside an opened summary, **Listen** reads the headline, the summary and the pointers aloud with the browser's own speech engine, so nothing leaves your device. Choose a female or male voice and the speed. Browsers do not say whether a voice is male or female, so the app reads it from the voice's name. If your device has no voice of the kind you pick, it says so and changes the pitch of the closest one.
+Inside an opened summary, **Listen** reads the headline, the summary and the pointers aloud with the browser's own speech engine, so nothing leaves your device. Choose a female or male voice, pick a specific voice from the menu and hear a sample, and set the speed. Natural, neural, Enhanced and Premium voices are ranked above the plain built-in ones, and a tip explains how to install better ones when only basic voices are found. Browsers do not say whether a voice is male or female, so the app reads it from the voice's name. If your device has no voice of the kind you pick, it says so and changes the pitch of the closest one.
 
 ## How accurate is it
 

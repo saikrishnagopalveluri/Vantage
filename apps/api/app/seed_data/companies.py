@@ -57,16 +57,16 @@ Palantir | saas
 Shopify | saas
 
 # IT services
-Tata Consultancy Services | itservices | TCS
-Infosys | itservices
-Wipro | itservices
+Tata Consultancy Services | itservices | TCS; Tata Consultancy; TCS India
+Infosys | itservices | Infosys Limited; Infosys Consulting; Infosys BPM
+Wipro | itservices | Wipro Limited; Wipro Consulting; Wipro Technologies
 HCLTech | itservices | HCL Technologies; HCL Tech
 Tech Mahindra | itservices
 Cognizant | itservices
-Accenture | itservices
-Capgemini | itservices
+Accenture | itservices | Accenture Strategy; Accenture India; Accenture Federal Services
+Capgemini | itservices | Capgemini Invent; Capgemini India; Capgemini Engineering
 LTIMindtree | itservices
-IBM | itservices
+IBM | itservices | IBM Consulting; IBM India; International Business Machines
 
 # Banking
 HDFC Bank | banking
@@ -110,13 +110,13 @@ Visa Inc | fintech
 Mastercard | fintech
 
 # Consulting
-McKinsey & Company | consulting | McKinsey
-Boston Consulting Group | consulting | BCG
-Bain & Company | consulting | Bain
-Deloitte | consulting
-PwC | consulting | PricewaterhouseCoopers
-EY | consulting | Ernst & Young
-KPMG | consulting
+McKinsey & Company | consulting | McKinsey; McKinsey India; McKinsey Global Institute; McKinsey Digital
+Boston Consulting Group | consulting | BCG; BCG India; BCG Henderson Institute
+Bain & Company | consulting | Bain; Bain India; Bain and Company
+Deloitte | consulting | Deloitte Touche Tohmatsu; Deloitte India; Deloitte Consulting; Deloitte US; Deloitte Insights
+PwC | consulting | PricewaterhouseCoopers; PwC India; PwC US; PwC Consulting; Price Waterhouse
+EY | consulting | Ernst & Young; EY India; EY Global; Ernst and Young
+KPMG | consulting | KPMG India; KPMG Advisory; KPMG US; KPMG Global
 
 # Manufacturing and automotive
 Tata Motors | auto

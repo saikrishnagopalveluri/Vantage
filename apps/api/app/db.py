@@ -1,16 +1,44 @@
 import os
+import re
+import sys
+from urllib.parse import quote, unquote
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 
+def _encode_password(rest: str) -> str:
+    """A password with a raw @ in it splits the address in the wrong place. The real separator is the last @, so
+    everything before it is the user and password, and the password is written out safely."""
+    at = rest.rfind("@")
+    userinfo = rest[:at] if at > 0 else ""
+    if "@" not in userinfo or ":" not in userinfo:
+        return rest
+    user, _, password = userinfo.partition(":")
+    return f"{user}:{quote(unquote(password), safe='')}{rest[at:]}"
+
+
 def normalize_url(url: str) -> str:
     """Accept the URLs hosts hand out (postgres://, postgresql://) and use the psycopg 3 driver."""
     for old in ("postgres://", "postgresql://"):
         if url.startswith(old):
-            return "postgresql+psycopg://" + url[len(old):]
+            return "postgresql+psycopg://" + _encode_password(url[len(old):])
     return url
+
+
+_DIRECT_HOST = re.compile(r"@db\.[a-z0-9]+\.supabase\.co(?::\d+)?/", re.IGNORECASE)
+
+
+def connection_problem(url: str) -> str | None:
+    """A plain-language warning when the address is one that can't work from a serverless host, or None."""
+    if _DIRECT_HOST.search(url):
+        return (
+            "DATABASE_URL is Supabase's direct connection address (db.<project>.supabase.co). It only works over IPv6, which "
+            "Vercel does not have. Use the Transaction pooler string instead: host aws-0-<region>.pooler.supabase.com, port 6543, "
+            "user postgres.<project>. python -m app.vercel_env writes the right one."
+        )
+    return None
 
 
 def check_url(url: str) -> str:
@@ -33,6 +61,8 @@ def check_url(url: str) -> str:
 DATABASE_URL = normalize_url(os.getenv("DATABASE_URL") or "sqlite:///./vantage.db")  # empty counts as unset
 # Vercel runs each request in short-lived functions, so a pool of open connections only wastes them.
 SERVERLESS = bool(os.getenv("VERCEL"))
+if SERVERLESS and (_problem := connection_problem(DATABASE_URL)):
+    print(f"[vantage] {_problem}", file=sys.stderr)  # shows up in the host's logs, never in a response
 
 
 def engine_options(url: str, serverless: bool) -> dict:

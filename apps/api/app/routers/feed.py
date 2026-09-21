@@ -104,6 +104,7 @@ def get_feed(
                 action=r.action,
                 matched=r.matched,
                 domains=r.domains,
+                newsletter=r.newsletter,
                 saved=r.article.id in saved,
             )
             for r in page

@@ -385,3 +385,17 @@ MBA_COMPANIES = {
     "ABB", "Bosch", "Tata Steel", "Sun Pharma", "Dr. Reddy's", "Cipla", "Apollo Hospitals", "UPL", "Pidilite",
     "Hindustan Petroleum", "Bharat Petroleum", "Trent", "Aditya Birla Fashion and Retail", "Shoppers Stop", "DMart",
 }
+
+
+# ---- more consulting, advisory, IT services and digital-transformation firms and roles -------------------------
+
+from . import expansion as _expansion  # noqa: E402
+
+COMPANIES += _expansion.COMPANIES
+for _domain, _text in _expansion.CAPABILITIES.items():
+    CAPABILITIES[_domain] = CAPABILITIES.get(_domain, "") + _text
+for _domain, _text in _expansion.ROLES.items():
+    ROLES[_domain] = ROLES.get(_domain, "") + _text
+MBA_COMPANIES |= _expansion.MBA_COMPANIES
+MBA_ROLES |= _expansion.MBA_ROLES
+MBA_SKILLS |= _expansion.MBA_SKILLS

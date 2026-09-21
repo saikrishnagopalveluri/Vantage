@@ -1,4 +1,5 @@
 import { getUserId } from "./session";
+import type { QuizQuestion } from "./quiz";
 import { MAX_FIELDS } from "./types";
 import type {
   AuthResult,
@@ -148,6 +149,8 @@ export const api = {
       body: { article_id: articleId, action },
     }),
   saved: (userId: string, signal?: AbortSignal) => request<SavedItem[]>(`/feed/${userId}/saved`, { signal }),
+  quiz: (userId: string, level: number, exclude: string[], count: number, signal?: AbortSignal) =>
+    request<{ level: number; questions: QuizQuestion[] }>(`/quiz/${userId}${qs({ level, count, exclude: exclude.join(",") })}`, { signal }),
 
   domains: (signal?: AbortSignal) => request<Domain[]>("/taxonomy/domains", { signal }),
   roles: (q: string, domainId?: string | null, signal?: AbortSignal, limit = 40, mba = false) =>

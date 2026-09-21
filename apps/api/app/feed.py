@@ -23,6 +23,7 @@ from app.models import (
     ProfileStatus,
     Role,
     RoleCapability,
+    Source,
     TagType,
     Topic,
     UserCapability,
@@ -34,14 +35,15 @@ from app.models import (
 )
 from app.relevance import ArticleTags, ProfileTags, score_article
 from app.hiring import canonical
+from app.seed_data.sources import NEWSLETTER_NAMES
 from app.story import is_low_value, story_kind
 from app.why import Matched, explain
 
-Lens = Literal["for_you", "companies", "skills"]
+Lens = Literal["for_you", "companies", "skills", "newsletters"]
 Tier = Literal["critical", "relevant", "explore"]
 
 WINDOW_DAYS = 45
-MAX_CANDIDATES = 600
+MAX_CANDIDATES = 1500  # about a day of stories from ~200 feeds is 600, so a wider window keeps last week's best in reach
 CRITICAL_MIN = 70.0
 RELEVANT_MIN = 40.0
 # Below this an article is noise for this reader, however many things it loosely touches. A story that
@@ -50,6 +52,8 @@ MIN_SCORE = 25.0
 # Stories from better sources count a little more: 1 -> 0.97, 3 -> 1.03, 5 -> 1.09.
 AUTHORITY_BASE = 0.94
 AUTHORITY_STEP = 0.03
+# Newsletter essays rarely name a company in the headline, so their section lets weaker matches in.
+NEWSLETTER_MIN_SCORE = 12.0
 # Stock tips and holiday notices name companies without saying anything useful for a career.
 LOW_VALUE_FACTOR = 0.6
 # Share-price commentary is worth less to a career reader than a deal, a result or a leadership change.
@@ -233,6 +237,7 @@ class RankedArticle:
     matched: dict[str, list[str]]
     domains: list[str]
     also_covered_by: list[str] = field(default_factory=list)
+    newsletter: bool = False
 
 
 def _tags_for(db: Session, article_ids: list[str]) -> dict[str, dict[TagType, dict[str, float]]]:
@@ -285,12 +290,11 @@ def rank(
             )
         )
     )
-    articles = db.scalars(
-        select(Article)
-        .where(Article.published_at >= now - timedelta(days=WINDOW_DAYS))
-        .order_by(Article.published_at.desc())
-        .limit(MAX_CANDIDATES)
-    ).all()
+    candidates = select(Article).where(Article.published_at >= now - timedelta(days=WINDOW_DAYS))
+    if lens == "newsletters":
+        candidates = candidates.join(Source, Source.id == Article.source_id).where(Source.name.in_(NEWSLETTER_NAMES))
+    articles = db.scalars(candidates.order_by(Article.published_at.desc()).limit(MAX_CANDIDATES)).all()
+    floor = NEWSLETTER_MIN_SCORE if lens == "newsletters" else MIN_SCORE
     tag_map = _tags_for(db, [a.id for a in articles])
     hydrate(db, ctx, {ref for by_type in tag_map.values() for refs in by_type.values() for ref in refs} | set(ctx.tags.target_industries))
     gaps = ctx.wanted - ctx.owned
@@ -340,7 +344,7 @@ def rank(
         elif kind == "markets":
             score *= MARKETS_FACTOR
         score = round(min(100.0, max(0.0, score + _behaviour_adjustment(ctx, t, protected))), 1)
-        if score < MIN_SCORE:
+        if score < floor:
             continue
 
         matched = Matched(
@@ -376,6 +380,7 @@ def rank(
                     "topics": names(t[TagType.TOPIC]),
                 },
                 domains=names(top_domains),
+                newsletter=article.source.name in NEWSLETTER_NAMES,
             )
         )
     ranked.sort(key=lambda r: (-r.score, -r.article.source.authority, -r.published.timestamp()))

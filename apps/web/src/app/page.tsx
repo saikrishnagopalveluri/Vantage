@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowIcon, ExternalIcon, Logo } from "@/components/icons";
+import { PartnerBadge } from "@/components/partner-badge";
 import { RolePeek } from "@/components/role-peek";
 import { LinkButton, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -284,6 +285,7 @@ export default function Home() {
 
       <footer className="border-t border-line">
         <div className="px-safe mx-auto max-w-5xl space-y-2 py-8 text-sm text-muted md:px-8">
+          <PartnerBadge size="lg" className="mb-5" />
           <p>
             Job titles, tools and skills include information from the O*NET 31.0 Database by the U.S. Department of Labor, Employment and
             Training Administration, used under the CC BY 4.0 license. Company names come from SEC EDGAR, the NSE equity list and Wikidata.

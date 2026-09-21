@@ -224,6 +224,7 @@ class FeedItem(BaseModel):
     matched: dict[str, list[str]]
     domains: list[str]
     saved: bool
+    newsletter: bool = False  # from a newsletter rather than a news site
 
     @field_validator("published_at")
     @classmethod
@@ -239,7 +240,7 @@ class FeedSummary(BaseModel):
 
 
 class FeedOut(BaseModel):
-    lens: Literal["for_you", "companies", "skills"]
+    lens: Literal["for_you", "companies", "skills", "newsletters"]
     summary: FeedSummary
     items: list[FeedItem]
     offset: int

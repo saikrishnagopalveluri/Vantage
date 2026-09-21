@@ -12,7 +12,10 @@ export type Gender = "female" | "male";
 export interface Prefs {
   gender: Gender;
   rate: number;
+  /** A voice the reader picked by name for each gender. Empty means "the best one this device has". */
+  voices?: Partial<Record<Gender, string>>;
 }
+export type Quality = "natural" | "enhanced" | "network" | "basic";
 export interface Picked {
   voice: SpeechSynthesisVoice | null;
   pitch: number;
@@ -43,22 +46,69 @@ export function voiceGender(name: string): Gender | null {
   return null;
 }
 
-/** English voices only, Indian English first for our readers, then the other Englishes; "natural" neural voices sound best. */
+/**
+ * How natural a voice is likely to sound, judged from what the device tells us. Neural voices ("Natural" in Edge,
+ * "Neural" elsewhere) are far better than the older built-in ones, Apple's Enhanced and Premium voices and Siri
+ * voices come next, then voices synthesised on a server (Chrome's Google voices, Android network voices), and the
+ * old built-in ones last.
+ */
+export function voiceQuality(voice: Pick<SpeechSynthesisVoice, "name" | "localService">): Quality {
+  if (/natural|neural/i.test(voice.name)) return "natural";
+  if (/premium|enhanced|siri/i.test(voice.name)) return "enhanced";
+  if (voice.localService === false || /google|network|online/i.test(voice.name)) return "network";
+  return "basic";
+}
+
+export const QUALITY_LABEL: Record<Quality, string> = { natural: "Natural", enhanced: "Enhanced", network: "Online", basic: "Basic" };
+const QUALITY_SCORE: Record<Quality, number> = { natural: 8, enhanced: 6, network: 4, basic: 0 };
+
+/** Best first: quality matters most, then Indian English for our readers, then the other Englishes. */
 function rank(voice: SpeechSynthesisVoice): number {
   const lang = voice.lang.replace("_", "-").toLowerCase();
   const region = lang === "en-in" ? 3 : lang === "en-gb" ? 2 : lang === "en-us" ? 2 : 1;
-  const natural = /natural|neural|online/i.test(voice.name) ? 2 : 0;
-  return region + natural + (voice.default ? 0.5 : 0);
+  const legacy = /desktop|espeak|compact/i.test(voice.name) ? -1 : 0;
+  return QUALITY_SCORE[voiceQuality(voice)] + region + legacy + (voice.default ? 0.5 : 0);
 }
 
-export function pickVoice(voices: readonly SpeechSynthesisVoice[], gender: Gender): Picked {
-  const english = voices.filter((v) => v.lang.replace("_", "-").toLowerCase().startsWith("en"));
+const isEnglish = (v: SpeechSynthesisVoice) => v.lang.replace("_", "-").toLowerCase().startsWith("en");
+
+export function pickVoice(voices: readonly SpeechSynthesisVoice[], gender: Gender, chosen?: string | null): Picked {
+  const english = voices.filter(isEnglish);
   const best = (list: SpeechSynthesisVoice[]) => [...list].sort((a, b) => rank(b) - rank(a))[0] ?? null;
+  const picked = chosen ? english.find((v) => v.name === chosen) : undefined;
+  if (picked) return { voice: picked, pitch: 1, approximated: false };
   const match = best(english.filter((v) => voiceGender(v.name) === gender));
   if (match) return { voice: match, pitch: 1, approximated: false };
   // Nothing of that gender: prefer a voice that is at least the other way round, so the pitch shift is small.
   const fallback = best(english.filter((v) => voiceGender(v.name) === null)) ?? best(english);
   return { voice: fallback, pitch: gender === "female" ? FEMALE_PITCH : MALE_PITCH, approximated: true };
+}
+
+export interface VoiceOption {
+  name: string;
+  label: string;
+  quality: Quality;
+}
+
+const tidy = (name: string) => name.replace(/^(Microsoft|Google)\s+/i, "").replace(/\s+-\s+English.*$/i, "").replace(/\s+Online\s*\(Natural\)/i, "").replace(/\s*\(.*?\)\s*$/, "").trim() || name;
+
+/** The English voices a reader can choose from, best first: those matching the gender, then ones that don't say. */
+export function voiceOptions(voices: readonly SpeechSynthesisVoice[], gender: Gender): { matching: VoiceOption[]; other: VoiceOption[] } {
+  const build = (v: SpeechSynthesisVoice): VoiceOption => ({ name: v.name, quality: voiceQuality(v), label: `${tidy(v.name)} (${v.lang.replace("_", "-")}, ${QUALITY_LABEL[voiceQuality(v)].toLowerCase()})` });
+  const english = [...voices].filter(isEnglish).sort((a, b) => rank(b) - rank(a));
+  return {
+    matching: english.filter((v) => voiceGender(v.name) === gender).map(build),
+    other: english.filter((v) => voiceGender(v.name) === null).map(build),
+  };
+}
+
+/** Advice for getting nicer voices, when the best one on this device is still a basic one. */
+export function upgradeTip(userAgent: string): string {
+  if (/iPhone|iPad/i.test(userAgent)) return "For nicer voices, open Settings, Accessibility, Spoken Content, Voices, English, and download one marked Enhanced or Premium.";
+  if (/Android/i.test(userAgent)) return "For nicer voices, open Settings, System, Languages, Text-to-speech output, and install the English voice data.";
+  if (/Macintosh|Mac OS/i.test(userAgent)) return "For nicer voices, open System Settings, Accessibility, Spoken Content, System voice, Manage Voices, and download an Enhanced or Premium English voice.";
+  if (/Edg\//i.test(userAgent)) return "For nicer voices, open Windows Settings, Accessibility, Narrator, Add natural voices, and install an English one.";
+  return "For nicer voices, try Microsoft Edge, which includes free Natural voices, or add a better English voice in your device's speech settings.";
 }
 
 /** Make text sound right read aloud: symbols spelled out, stray markup and spacing removed. */
@@ -148,7 +198,7 @@ export function stopIfPlaying(id: string) {
 export function speak(id: string, pieces: string[], prefs: Prefs, from = 0): Picked {
   const synth = window.speechSynthesis;
   synth.cancel();
-  const picked = pickVoice(synth.getVoices(), prefs.gender);
+  const picked = pickVoice(synth.getVoices(), prefs.gender, prefs.voices?.[prefs.gender]);
   approximatedNow = picked.approximated;
   active = { id, pieces, index: from };
   pieces.slice(from).forEach((piece, offset) => {
@@ -182,6 +232,13 @@ export function speak(id: string, pieces: string[], prefs: Prefs, from = 0): Pic
   });
   set({ id, status: "playing" });
   return picked;
+}
+
+export const SAMPLE = "This is how I sound. A story about your target company, read the way you like it.";
+
+/** Say one sentence in the current voice, so it can be judged before reading a whole story. */
+export function preview(prefs: Prefs) {
+  speak("preview", [SAMPLE], prefs);
 }
 
 /** Same story, new voice or speed, carrying on from the sentence being read. */
@@ -236,9 +293,11 @@ function readPrefs(): Prefs {
   let prefs = DEFAULT_PREFS;
   try {
     const parsed = raw ? (JSON.parse(raw) as Partial<Prefs>) : {};
+    const name = (v: unknown) => (typeof v === "string" && v.length < 200 ? v : undefined);
     prefs = {
       gender: parsed.gender === "male" ? "male" : "female",
       rate: (RATES as readonly number[]).includes(parsed.rate ?? 0) ? (parsed.rate as number) : 1,
+      voices: { female: name(parsed.voices?.female), male: name(parsed.voices?.male) },
     };
   } catch {}
   cached = { raw, prefs };
@@ -246,7 +305,8 @@ function readPrefs(): Prefs {
 }
 
 export function setPrefs(next: Partial<Prefs>) {
-  const merged = { ...readPrefs(), ...next };
+  const current = readPrefs();
+  const merged = { ...current, ...next, voices: { ...current.voices, ...next.voices } };
   try {
     window.localStorage.setItem(PREFS_KEY, JSON.stringify(merged));
   } catch {}

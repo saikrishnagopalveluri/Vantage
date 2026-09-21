@@ -1,4 +1,4 @@
-export type Lens = "for_you" | "companies" | "skills";
+export type Lens = "for_you" | "companies" | "skills" | "newsletters";
 export type Tier = "critical" | "relevant" | "explore";
 export type ProfileStatus = "targeting" | "placed";
 export type CapabilityKind = "skill" | "tool";
@@ -51,6 +51,7 @@ export interface FeedItem {
   matched: { companies: string[]; roles: string[]; industries: string[]; capabilities: string[]; topics: string[] };
   domains: string[];
   saved: boolean;
+  newsletter?: boolean;
 }
 
 export interface Feed {
