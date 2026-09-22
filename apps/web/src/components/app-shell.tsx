@@ -13,8 +13,9 @@ import { PartnerBadge } from "./partner-badge";
 import { SearchPalette } from "./search-palette";
 import { Skeleton, cx } from "./ui";
 
-// The game is only downloaded when someone opens it.
+// Each game is only downloaded when someone opens it.
 const QuizGame = dynamic(() => import("./quiz-game").then((m) => m.QuizGame), { ssr: false });
+const SpeedRound = dynamic(() => import("./speed-round").then((m) => m.SpeedRound), { ssr: false });
 
 const NAV = [
   { href: "/feed", label: "Feed", Icon: FeedIcon },
@@ -37,12 +38,14 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
   const online = useOnline();
   const [searching, setSearching] = useState(false);
   const [quiz, setQuiz] = useState(false);
+  const [speedRound, setSpeedRound] = useState(false);
   const [picker, setPicker] = useState(false);
   const openQuiz = useCallback(() => setQuiz(true), []);
   const openPicker = useCallback(() => setPicker(true), []);
   const onLogo = useMultiTap(openPicker); // tap the logo three times, opens the games picker
   const launchGame = useCallback((id: string) => {
     if (id === "pop-quiz") setQuiz(true);
+    if (id === "speed-round") setSpeedRound(true);
   }, []);
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -162,6 +165,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       <SearchPalette open={searching} onClose={() => setSearching(false)} />
       <GamePicker open={picker} onClose={() => setPicker(false)} onLaunch={launchGame} />
       {quiz && profile && <QuizGame userId={profile.user_id} onClose={() => setQuiz(false)} />}
+      {speedRound && profile && <SpeedRound userId={profile.user_id} onClose={() => setSpeedRound(false)} />}
     </div>
   );
 }

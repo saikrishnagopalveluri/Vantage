@@ -99,6 +99,11 @@ export const PlusIcon = (p: P) => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
+export const LightningIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M13 3L4 14h6l-1 7 9-11h-6z" />
+  </svg>
+);
 export const GamesIcon = (p: P) => (
   <svg {...base(p)}>
     <rect x="3" y="3" width="8.5" height="8.5" rx="1.5" />

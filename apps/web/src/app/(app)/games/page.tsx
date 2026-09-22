@@ -7,6 +7,7 @@ import { useProfile } from "@/components/profile-context";
 import { PageHeader } from "@/components/ui";
 
 const QuizGame = dynamic(() => import("@/components/quiz-game").then((m) => m.QuizGame), { ssr: false });
+const SpeedRound = dynamic(() => import("@/components/speed-round").then((m) => m.SpeedRound), { ssr: false });
 
 export default function GamesPage() {
   const { profile } = useProfile();
@@ -17,6 +18,7 @@ export default function GamesPage() {
       <PageHeader title="Games" subtitle="Quick breaks between stories, built from the same fields, roles and companies you follow." />
       <GameTiles onSelect={setActive} />
       {active === "pop-quiz" && <QuizGame userId={profile.user_id} onClose={() => setActive(null)} />}
+      {active === "speed-round" && <SpeedRound userId={profile.user_id} onClose={() => setActive(null)} />}
     </div>
   );
 }

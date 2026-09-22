@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, SVGProps } from "react";
-import { GamesIcon } from "../icons";
+import { GamesIcon, LightningIcon } from "../icons";
 
 export interface GameDef {
   id: string;
@@ -13,6 +13,7 @@ export interface GameDef {
 /** Every mini-game lives here. Add one row to grow the picker and the Games page together. */
 export const GAMES: GameDef[] = [
   { id: "pop-quiz", name: "Pop quiz", tagline: "How well do you know your field? Runs until three wrong answers.", Icon: GamesIcon },
+  { id: "speed-round", name: "Speed Round", tagline: "One minute on the clock. How many can you get right?", Icon: LightningIcon },
 ];
 
 /** The tile grid used by both the Games page and the triple-tap picker. */
