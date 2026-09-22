@@ -285,6 +285,7 @@ const lives = (page: Page, n: number) => expect(dialog(page).getByRole("img", { 
 async function openByTripleTap(page: Page) {
   const logo = page.getByRole("link", { name: /Vantage/ }).filter({ visible: true }).first();
   await logo.click({ clickCount: 3, delay: 40 });
+  await page.getByRole("dialog", { name: "Games" }).getByRole("button", { name: "Pop quiz" }).click();
   await expect(dialog(page)).toBeVisible();
 }
 
@@ -294,11 +295,15 @@ async function start(page: Page) {
 }
 
 test.describe("opening the game", () => {
-  test("tapping the logo three times opens the quiz", async ({ page }) => {
+  test("tapping the logo three times opens a games picker, and picking the quiz opens it", async ({ page }) => {
     await stubQuiz(page);
     await onboardAsStudent(page);
     await expect(dialog(page)).toHaveCount(0);
-    await openByTripleTap(page);
+    const logo = page.getByRole("link", { name: /Vantage/ }).filter({ visible: true }).first();
+    await logo.click({ clickCount: 3, delay: 40 });
+    const picker = page.getByRole("dialog", { name: "Games" });
+    await expect(picker).toBeVisible();
+    await picker.getByRole("button", { name: "Pop quiz" }).click();
     await expect(dialog(page).getByRole("heading", { level: 1 })).toContainText("How well do you know your field?");
   });
 
@@ -309,11 +314,11 @@ test.describe("opening the game", () => {
     await logo.click();
     await page.waitForTimeout(300);
     await expect(dialog(page)).toHaveCount(0);
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
     await logo.click();
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(1300);
     await logo.click();
-    await page.waitForTimeout(900);
+    await page.waitForTimeout(1300);
     await logo.click();
     await expect(dialog(page)).toHaveCount(0);
   });

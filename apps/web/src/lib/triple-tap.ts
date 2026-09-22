@@ -6,7 +6,7 @@ export const OPEN_QUIZ_EVENT = "vantage:open-quiz";
  * A handler that fires `onTriple` when it is clicked three times in quick succession. The third click is
  * swallowed so it doesn't also follow a link. Works the same for taps, mouse clicks and Enter on a focused link.
  */
-export function useMultiTap(onTriple: () => void, taps = 3, windowMs = 800) {
+export function useMultiTap(onTriple: () => void, taps = 3, windowMs = 1200) {
   const times = useRef<number[]>([]);
   return useCallback(
     (event?: MouseEvent) => {

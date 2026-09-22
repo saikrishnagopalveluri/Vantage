@@ -6,7 +6,8 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useOnline } from "@/lib/hooks";
 import type { Profile } from "@/lib/types";
-import { BookmarkIcon, CareerIcon, CompassIcon, FeedIcon, Logo, SearchIcon, UserIcon } from "./icons";
+import { BookmarkIcon, CareerIcon, CompassIcon, FeedIcon, GamesIcon, Logo, SearchIcon, UserIcon } from "./icons";
+import { GamePicker } from "./games/game-picker";
 import { OPEN_QUIZ_EVENT, useMultiTap } from "@/lib/triple-tap";
 import { PartnerBadge } from "./partner-badge";
 import { SearchPalette } from "./search-palette";
@@ -19,6 +20,7 @@ const NAV = [
   { href: "/feed", label: "Feed", Icon: FeedIcon },
   { href: "/explore", label: "Explore", Icon: CompassIcon },
   { href: "/career", label: "Skill gaps", Icon: CareerIcon },
+  { href: "/games", label: "Games", Icon: GamesIcon },
   { href: "/saved", label: "Saved", Icon: BookmarkIcon },
   { href: "/profile", label: "Profile", Icon: UserIcon },
 ];
@@ -35,8 +37,13 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
   const online = useOnline();
   const [searching, setSearching] = useState(false);
   const [quiz, setQuiz] = useState(false);
+  const [picker, setPicker] = useState(false);
   const openQuiz = useCallback(() => setQuiz(true), []);
-  const onLogo = useMultiTap(openQuiz); // tap the logo three times
+  const openPicker = useCallback(() => setPicker(true), []);
+  const onLogo = useMultiTap(openPicker); // tap the logo three times, opens the games picker
+  const launchGame = useCallback((id: string) => {
+    if (id === "pop-quiz") setQuiz(true);
+  }, []);
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   useEffect(() => {
@@ -133,7 +140,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
         aria-label="Main"
         className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper md:hidden"
       >
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-6">
           {NAV.map(({ href, label, Icon }) => (
             <li key={href}>
               <Link
@@ -153,6 +160,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       </nav>
 
       <SearchPalette open={searching} onClose={() => setSearching(false)} />
+      <GamePicker open={picker} onClose={() => setPicker(false)} onLaunch={launchGame} />
       {quiz && profile && <QuizGame userId={profile.user_id} onClose={() => setQuiz(false)} />}
     </div>
   );

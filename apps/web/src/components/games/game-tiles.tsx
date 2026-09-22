@@ -1,0 +1,37 @@
+"use client";
+
+import type { ComponentType, SVGProps } from "react";
+import { GamesIcon } from "../icons";
+
+export interface GameDef {
+  id: string;
+  name: string;
+  tagline: string;
+  Icon: ComponentType<SVGProps<SVGSVGElement>>;
+}
+
+/** Every mini-game lives here. Add one row to grow the picker and the Games page together. */
+export const GAMES: GameDef[] = [
+  { id: "pop-quiz", name: "Pop quiz", tagline: "How well do you know your field? Runs until three wrong answers.", Icon: GamesIcon },
+];
+
+/** The tile grid used by both the Games page and the triple-tap picker. */
+export function GameTiles({ onSelect }: { onSelect: (id: string) => void }) {
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2">
+      {GAMES.map((g) => (
+        <li key={g.id}>
+          <button
+            onClick={() => onSelect(g.id)}
+            aria-label={g.name}
+            className="btn-raised flex min-h-24 w-full flex-col items-start gap-2 rounded-xl p-4 text-left"
+          >
+            <g.Icon width={22} height={22} className="text-accent" />
+            <span className="font-display text-lg leading-none">{g.name}</span>
+            <span className="text-sm text-muted">{g.tagline}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}

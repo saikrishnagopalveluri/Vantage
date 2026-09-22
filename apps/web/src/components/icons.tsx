@@ -99,6 +99,18 @@ export const PlusIcon = (p: P) => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
+export const GamesIcon = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="3" y="3" width="8.5" height="8.5" rx="1.5" />
+    <rect x="12.5" y="12.5" width="8.5" height="8.5" rx="1.5" />
+    <circle cx="6" cy="6" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="9" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="15" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="15" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="19" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="19" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 export function Logo({ size = 28 }: { size?: number }) {
   return (
