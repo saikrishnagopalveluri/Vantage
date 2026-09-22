@@ -74,7 +74,7 @@ function Rail({ userId, focus }: { userId: string; focus: NamedRef[] }) {
           {focus.length ? (
             <ul className="mt-3 flex flex-wrap gap-1.5">
               {focus.map((d) => (
-                <li key={d.id} style={domainStyle(slugFor(d.name))} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold">
+                <li key={d.id} style={domainStyle(slugFor(d.name))} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold">
                   <DomainIcon slug={slugFor(d.name)} size={13} />
                   {d.name}
                 </li>
@@ -229,7 +229,7 @@ export default function FeedPage() {
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-10">
       <div className="min-w-0">
         <header className="mb-5 mt-1">
-          <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          <p className="mb-1 font-mono text-xs text-muted">
             {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
           </p>
           <h1 className="font-display text-[30px] leading-[1.1] md:text-[38px]">{greeting()}</h1>
@@ -244,7 +244,7 @@ export default function FeedPage() {
           )}
         </header>
 
-        <div className="sticky top-12 z-20 -mx-4 space-y-2.5 bg-paper/95 px-4 pb-3 pt-2 backdrop-blur md:top-0 md:mx-0 md:px-0">
+        <div className="sticky top-12 z-20 -mx-4 space-y-2.5 bg-paper px-4 pb-3 pt-2 md:top-0 md:mx-0 md:px-0">
           <Segmented label="Feed lens" options={LENSES} value={lens} onChange={setLens} />
           {focus.length > 1 && (
             <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0" role="group" aria-label="Filter by field">
@@ -252,7 +252,7 @@ export default function FeedPage() {
                 onClick={() => setDomainId(null)}
                 aria-pressed={domainId === null}
                 className={cx(
-                  "min-h-9 shrink-0 rounded-full border px-3.5 text-sm font-semibold transition-colors",
+                  "min-h-9 shrink-0 rounded-md border px-3.5 text-sm font-semibold transition-colors",
                   domainId === null ? "border-ink bg-ink text-paper" : "border-line text-muted hover:text-ink",
                 )}
               >
@@ -265,7 +265,7 @@ export default function FeedPage() {
                   aria-pressed={domainId === d.id}
                   style={domainId === d.id ? domainStyle(slugFor(d.name)) : undefined}
                   className={cx(
-                    "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-semibold transition-colors",
+                    "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border px-3.5 text-sm font-semibold transition-colors",
                     domainId === d.id ? "border-transparent" : "border-line text-muted hover:text-ink",
                   )}
                 >

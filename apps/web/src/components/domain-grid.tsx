@@ -35,7 +35,7 @@ export function DomainGrid({
 
   return (
     <div role="group" aria-label="Fields of work">
-      <div className={cx("sticky z-10 -mx-4 mb-4 border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur md:mx-0 md:rounded-xl md:border md:px-3.5", stickyClass)}>
+      <div className={cx("sticky z-10 -mx-4 mb-4 border-b border-line bg-paper px-4 py-2.5 md:mx-0 md:rounded-xl md:border md:px-3.5", stickyClass)}>
         <p className="text-sm text-muted" aria-live="polite">
           <span className="font-mono font-semibold text-ink">
             {selected.length} of {MAX_FIELDS}
@@ -74,7 +74,7 @@ export function DomainGrid({
         <div className="space-y-6">
           {groupOf(data).map(([group, domains]) => (
             <section key={group} aria-label={group}>
-              <h3 className="mb-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{group}</h3>
+              <h3 className="mb-2.5 font-mono text-xs text-muted">{group}</h3>
               <ul className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2">
                 {domains.map((d) => {
                   const on = selected.includes(d.id);
@@ -88,7 +88,7 @@ export function DomainGrid({
                         aria-disabled={blocked}
                         className={cx(
                           "relative flex min-h-16 w-full items-center gap-3 rounded-2xl border p-3 text-left transition-[transform,background-color,border-color,opacity] duration-200",
-                          on ? "border-transparent shadow-inner" : "raised",
+                          on ? "border-transparent" : "raised",
                           blocked ? "cursor-not-allowed opacity-45" : "active:scale-[0.98]",
                           !on && !blocked && "hover:border-muted",
                         )}

@@ -114,7 +114,7 @@ export default function CompanyPage() {
                 <ul className="mt-2.5 flex flex-wrap gap-2">
                   {group.roles.map((r) => (
                     <li key={r.id}>
-                      <Link href={`/explore/roles/${r.id}`} className="btn-raised inline-flex min-h-9 items-center rounded-full px-3.5 text-sm font-medium">
+                      <Link href={`/explore/roles/${r.id}`} className="btn-raised inline-flex min-h-9 items-center rounded-md px-3.5 text-sm font-medium">
                         {r.title}
                       </Link>
                     </li>

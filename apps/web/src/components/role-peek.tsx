@@ -31,7 +31,7 @@ export function RolePeek() {
 
   return (
     <div className="raised rounded-2xl p-5 md:p-6">
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Try it, no account needed</p>
+      <p className="font-mono text-xs text-accent">Try it, no account needed</p>
       <h3 className="mt-1.5 font-display text-2xl leading-snug">What does a job ask for?</h3>
       <p className="mt-1 text-[15px] text-muted">Type any job title. Skills and tools come from O*NET, a US Department of Labor database.</p>
 
@@ -61,7 +61,7 @@ export function RolePeek() {
               <button
                 type="button"
                 onClick={() => setQuery(e)}
-                className="btn-raised min-h-9 rounded-full px-3.5 text-sm font-semibold"
+                className="btn-raised min-h-9 rounded-md px-3.5 text-sm font-semibold"
               >
                 {e}
               </button>
@@ -108,7 +108,7 @@ export function RolePeek() {
               {role.description && <p className="mt-1.5 line-clamp-3 text-[15px] leading-relaxed text-muted">{role.description}</p>}
               {skills.length > 0 && (
                 <div className="mt-3">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">Skills</p>
+                  <p className="font-mono text-xs text-muted">Skills</p>
                   <ul className="mt-1.5 flex flex-wrap gap-1.5">
                     {skills.map((s) => (
                       <li key={s.id}>
@@ -120,7 +120,7 @@ export function RolePeek() {
               )}
               {tools.length > 0 && (
                 <div className="mt-3">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">Tools</p>
+                  <p className="font-mono text-xs text-muted">Tools</p>
                   <ul className="mt-1.5 flex flex-wrap gap-1.5">
                     {tools.map((s) => (
                       <li key={s.id}>

@@ -16,7 +16,7 @@ function SkillList({ title, items, owned }: { title: string; items: CapabilityRe
   if (!items.length) return null;
   return (
     <div>
-      <h3 className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{title}</h3>
+      <h3 className="mb-2 font-mono text-xs text-muted">{title}</h3>
       <ul className="flex flex-wrap gap-2">
         {items.map((c) => {
           const has = owned.has(c.id);
@@ -25,8 +25,8 @@ function SkillList({ title, items, owned }: { title: string; items: CapabilityRe
               key={c.id}
               className={
                 has
-                  ? "inline-flex items-center gap-1.5 rounded-full bg-good-soft px-3 py-1.5 text-sm font-semibold text-good"
-                  : "inline-flex items-center rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium"
+                  ? "inline-flex items-center gap-1.5 rounded-md bg-good-soft px-3 py-1.5 text-sm font-semibold text-good"
+                  : "inline-flex items-center rounded-md border border-line bg-surface px-3 py-1.5 text-sm font-medium"
               }
             >
               {has && <CheckIcon width={14} height={14} />}
@@ -142,7 +142,7 @@ export default function RolePage() {
               <ul className="mt-3 flex flex-wrap gap-2">
                 {shownCompanies.map((c) => (
                   <li key={c.id}>
-                    <Link href={`/explore/companies/${c.id}`} className="btn-raised inline-flex min-h-9 items-center rounded-full px-3.5 text-sm font-semibold">
+                    <Link href={`/explore/companies/${c.id}`} className="btn-raised inline-flex min-h-9 items-center rounded-md px-3.5 text-sm font-semibold">
                       {c.name}
                     </Link>
                   </li>

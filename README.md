@@ -21,7 +21,7 @@ Twenty-four fields of work, from Marketing, Finance, Sales and HR through Softwa
 
 Only the hand-written roles, skills and companies, plus imported company names that are distinctive enough (for example "Reliance Industries" but not "First Bank"), are used to tag news. The rest are there to search, pick and compare, so 45,000 titles can't drown the feed in false matches.
 
-News comes from about 195 official RSS and Atom feeds, 25 of them newsletters (see below). We store the headline, link, publisher, a 300-character teaser and up to 1,600 characters of the feed's own text, which is used only to build the expandable summary. We never store full articles. Many publishers only share a headline and a teaser in their feed. For those, the summary says so and links to the article.
+News comes from about 195 official RSS and Atom feeds, 26 of them newsletters (see below). We store the headline, link, publisher, a 300-character teaser and up to 1,600 characters of the feed's own text, which is used only to build the expandable summary. We never store full articles. Many publishers only share a headline and a teaser in their feed. For those, the summary says so and links to the article.
 
 ### Consulting, IT services and digital transformation
 

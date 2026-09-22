@@ -236,7 +236,7 @@ export default function OnboardingPage() {
         )}
       </main>
 
-      <footer className="pb-safe sticky bottom-0 border-t border-line bg-paper/95 backdrop-blur">
+      <footer className="pb-safe sticky bottom-0 border-t border-line bg-paper">
         <div className="px-safe mx-auto flex w-full max-w-xl items-center gap-3 py-3">
           {stepIndex > 0 && (
             <Button variant="ghost" onClick={() => setStepIndex((i) => i - 1)} disabled={busy}>

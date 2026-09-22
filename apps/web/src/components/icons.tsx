@@ -7,9 +7,9 @@ const base = (props: P) => ({
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 1.8,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
+  strokeWidth: 1.75,
+  strokeLinecap: "square" as const,
+  strokeLinejoin: "miter" as const,
   "aria-hidden": true,
   ...props,
 });

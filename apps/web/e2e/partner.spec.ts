@@ -2,7 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { onboardAsStudent } from "./helpers";
 
-const credit = (page: Page) => page.getByText(/Powered by\s+DOT Club,\s+IBS Hyderabad/).first();
+// The desktop sidebar carries a copy too and is hidden on a phone, so take the first copy that is actually on screen.
+const credit = (page: Page) => page.getByText(/Powered by\s+DOT Club,\s+IBS Hyderabad/).filter({ visible: true }).first();
 
 async function logoLoaded(page: Page) {
   const logo = page.getByRole("img", { name: "DOT Club logo" }).first();

@@ -140,7 +140,7 @@ export default function CareerPage() {
                   onClick={() => setRoleId(r.role_id)}
                   aria-pressed={r.role_id === current.role_id}
                   className={cx(
-                    "min-h-9 shrink-0 rounded-full border px-3.5 text-sm font-semibold transition-colors",
+                    "min-h-9 shrink-0 rounded-md border px-3.5 text-sm font-semibold transition-colors",
                     r.role_id === current.role_id ? "border-ink bg-ink text-paper" : "border-line text-muted hover:text-ink",
                   )}
                 >
@@ -166,8 +166,8 @@ export default function CareerPage() {
           </Card>
 
           {next && (
-            <Card className="border-accent/40 bg-accent-soft">
-              <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Learn this next</p>
+            <Card className="border-accent/40 bg-sunken">
+              <p className="font-mono text-xs text-accent">Learn this next</p>
               <p className="mt-1 font-display text-2xl">{next.name}</p>
               <p className="mt-1 text-[15px]">
                 {next.required_by_count} of {next.required_by_total} companies ask for it, and it isn&apos;t on your profile yet.

@@ -93,7 +93,7 @@ export function LegalLayout({
       </header>
 
       <main className="px-safe mx-auto w-full max-w-3xl py-8 md:py-12">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <p className="font-mono text-xs text-muted">
           {info ? `Version ${version(info)}, updated ${formatVersion(version(info))}` : " "}
         </p>
         <h1 className="mt-2 font-display text-[34px] leading-[1.08] md:text-[46px]">{title}</h1>

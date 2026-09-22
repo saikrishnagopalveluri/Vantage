@@ -23,7 +23,7 @@ const TIER_STYLE: Record<Tier, string> = {
 export function RelevanceBadge({ score, tier }: { score: number; tier: Tier }) {
   return (
     <span
-      className={cx("inline-flex shrink-0 items-baseline gap-1.5 rounded-full px-3 py-1 text-xs font-semibold", TIER_STYLE[tier])}
+      className={cx("inline-flex shrink-0 items-baseline gap-1.5 rounded-md px-3 py-1 text-xs font-semibold", TIER_STYLE[tier])}
       title={`${Math.round(score)} out of 100 for you`}
     >
       <span className="font-mono text-sm">{Math.round(score)}</span>
@@ -55,7 +55,7 @@ function Brief({ item }: { item: FeedItem }) {
       ))}
       {brief.pointers.length > 0 && (
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Quick pointers</p>
+          <p className="font-mono text-xs text-accent">Quick pointers</p>
           <ul className="mt-1.5 list-disc space-y-1.5 pl-5 marker:text-accent">
             {brief.pointers.map((p) => (
               <li key={p}>{p}</li>
@@ -94,7 +94,7 @@ export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onO
         ))}
       </div>
       <p className="mt-2 text-xs text-muted">
-        {item.newsletter && <span className="mr-1.5 rounded border border-line px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">Newsletter</span>}
+        {item.newsletter && <span className="mr-1.5 rounded border border-line px-1.5 py-0.5 font-mono text-xs text-accent">Newsletter</span>}
         {item.source.name} · {timeAgo(item.published_at)}
       </p>
 
@@ -120,9 +120,9 @@ export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onO
       )}
 
       <div className="mt-3.5 rounded-xl border border-line bg-sunken p-3.5">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Why it matters to you</p>
+        <p className="font-mono text-xs text-accent">Why it matters to you</p>
         <p className="mt-1 text-[15px] leading-snug">{item.why_this_matters}</p>
-        <p className="mt-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">What to do</p>
+        <p className="mt-2.5 font-mono text-xs text-accent">What to do</p>
         <p className="mt-1 text-[15px] leading-snug">{item.action}</p>
       </div>
 

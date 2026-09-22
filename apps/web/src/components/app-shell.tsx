@@ -102,7 +102,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       </aside>
 
       {/* Mobile top bar */}
-      <header className="pt-safe sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur md:hidden">
+      <header className="pt-safe sticky top-0 z-30 border-b border-line bg-paper md:hidden">
         <div className="px-safe flex h-12 items-center gap-2.5">
           <Link href="/feed" onClick={onLogo} aria-label="Vantage home" className="flex touch-manipulation select-none items-center gap-2.5">
             <Logo size={26} />
@@ -131,7 +131,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       {/* Mobile bottom tabs */}
       <nav
         aria-label="Main"
-        className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 backdrop-blur md:hidden"
+        className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper md:hidden"
       >
         <ul className="grid grid-cols-5">
           {NAV.map(({ href, label, Icon }) => (

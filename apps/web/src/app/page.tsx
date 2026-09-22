@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowIcon, ExternalIcon, Logo } from "@/components/icons";
+import { RelevanceBadge } from "@/components/feed-card";
 import { PartnerBadge } from "@/components/partner-badge";
 import { RolePeek } from "@/components/role-peek";
 import { LinkButton, Skeleton } from "@/components/ui";
@@ -19,10 +20,10 @@ const STEPS = [
   },
   {
     title: "We read the news for you",
-    body: "About 90 official news feeds, every hour. A story is kept only when it names something in our lists of roles, companies, skills and topics, so nothing is guessed.",
+    body: "About 195 official news and newsletter feeds, every hour. A story is kept only when it names something in our lists of roles, companies, skills and topics, so nothing is guessed.",
   },
   {
-    title: "You get a reason, not just a headline",
+    title: "Every headline comes with a reason",
     body: "Each story comes with one plain sentence on why it matters to you and a small next step. A separate view compares what employers ask for with what you can already do.",
   },
 ];
@@ -70,12 +71,31 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
+/** What a story looks like once it has been read for you. The story itself is made up. */
+function SampleStory() {
+  return (
+    <div className="raised rounded-2xl p-5 md:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-muted">A sample story, Business Daily</p>
+        <RelevanceBadge score={92} tier="critical" />
+      </div>
+      <h2 className="mt-2 font-display text-xl leading-snug">Consulting firms open new AI transformation roles across India</h2>
+      <div className="mt-3.5 rounded-xl border border-line bg-sunken p-3.5">
+        <p className="font-mono text-xs text-accent">Why it matters to you</p>
+        <p className="mt-1 text-[15px] leading-snug">It names Associate Consultant, a role you are targeting.</p>
+        <p className="mt-2.5 font-mono text-xs text-accent">What to do</p>
+        <p className="mt-1 text-[15px] leading-snug">Add one line about this to your notes for Associate Consultant interviews.</p>
+      </div>
+    </div>
+  );
+}
+
 function PulseCard({ pulse, loading }: { pulse: Pulse | undefined; loading: boolean }) {
   const n = (v: number) => v.toLocaleString();
   return (
     <div className="raised rounded-2xl p-5 md:p-6" aria-busy={loading}>
       <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Right now</p>
+        <p className="font-mono text-xs text-accent">Right now</p>
         {pulse?.updated_at && <p className="text-xs text-muted">Feeds checked {timeAgo(pulse.updated_at)}</p>}
       </div>
 
@@ -132,7 +152,7 @@ export default function Home() {
 
   return (
     <div className="min-h-dvh">
-      <header className="pt-safe sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
+      <header className="pt-safe sticky top-0 z-30 border-b border-line bg-paper">
         <div className="px-safe mx-auto flex h-14 w-full max-w-5xl items-center gap-2 md:px-8">
           <Link href="/" className="flex items-center gap-2.5" aria-label="Vantage home">
             <Logo size={28} />
@@ -172,7 +192,7 @@ export default function Home() {
       <main className="px-safe mx-auto w-full max-w-5xl md:px-8">
         <section className="grid gap-8 py-10 md:py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
           <div className="rise">
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">For management students first, and people already working</p>
+            <p className="font-mono text-xs text-muted">For management students first, and people already working</p>
             <h1 className="mt-3 font-display text-[40px] leading-[1.04] md:text-[58px]">Career news that fits you.</h1>
             <p className="mt-4 max-w-lg text-[17px] leading-relaxed text-muted">
               Vantage reads business and tech news, then tells you why each story matters for your job hunt or your job. It is built first for MBA and PGDM
@@ -211,6 +231,12 @@ export default function Home() {
           </div>
         </section>
 
+        <section aria-label="A sample story" className="pb-10">
+          <div className="max-w-2xl">
+            <SampleStory />
+          </div>
+        </section>
+
         <section aria-label="Try it" className="pb-12 md:pb-16">
           <div className="max-w-2xl">
             <RolePeek />
@@ -218,7 +244,7 @@ export default function Home() {
         </section>
 
         <section id="about" aria-labelledby="about-title" className="scroll-mt-20 border-t border-line py-12 md:py-16">
-          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted">About</p>
+          <p className="font-mono text-xs text-muted">About</p>
           <h2 id="about-title" className="mt-2 max-w-2xl font-display text-[30px] leading-[1.1] md:text-[40px]">
             A news feed built around your next move
           </h2>
@@ -229,22 +255,22 @@ export default function Home() {
             firms that recruit for them, come first. It works just as well once you have a job.
           </p>
 
-          <ol className="mt-8 grid gap-4 md:grid-cols-3">
+          <ol className="mt-8 divide-y divide-line border-y border-line">
             {STEPS.map((s, i) => (
-              <li key={s.title} className="raised rounded-2xl p-5">
+              <li key={s.title} className="grid gap-2 py-6 md:grid-cols-[3rem_1fr_1.5fr] md:gap-8">
                 <span className="font-mono text-sm text-accent">{i + 1}</span>
-                <h3 className="mt-2 font-display text-xl leading-snug">{s.title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-muted">{s.body}</p>
+                <h3 className="font-display text-xl leading-snug">{s.title}</h3>
+                <p className="text-[15px] leading-relaxed text-muted">{s.body}</p>
               </li>
             ))}
           </ol>
 
           <h3 className="mt-12 font-display text-2xl">What we are careful about</h3>
-          <div className="mt-4 grid gap-6 md:grid-cols-3">
+          <div className="mt-4 divide-y divide-line border-y border-line">
             {CARE.map((c) => (
-              <div key={c.title}>
+              <div key={c.title} className="grid gap-1.5 py-5 md:grid-cols-[1fr_1.6fr] md:gap-8">
                 <h4 className="font-semibold">{c.title}</h4>
-                <p className="mt-1.5 text-[15px] leading-relaxed text-muted">{c.body}</p>
+                <p className="text-[15px] leading-relaxed text-muted">{c.body}</p>
               </div>
             ))}
           </div>
@@ -270,7 +296,7 @@ export default function Home() {
         </section>
 
         {!signedIn && (
-          <section aria-label="Get started" className="mb-12 rounded-3xl bg-accent-soft px-6 py-10 text-center md:mb-16 md:py-14">
+          <section aria-label="Get started" className="mb-12 rounded-2xl border border-line bg-sunken px-6 py-10 text-center md:mb-16 md:py-14">
             <h2 className="mx-auto max-w-xl font-display text-[28px] leading-tight md:text-[36px]">Two minutes to a feed that knows your field</h2>
             <p className="mx-auto mt-3 max-w-md text-[15px] text-muted">Pick your fields, a few roles and companies, and what you can already do.</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">

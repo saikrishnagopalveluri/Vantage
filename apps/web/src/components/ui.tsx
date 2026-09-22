@@ -53,7 +53,7 @@ export function Chip({
     good: "bg-good-soft text-good",
   };
   return (
-    <span className={cx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium", tones[tone])}>
+    <span className={cx("inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium", tones[tone])}>
       {children}
     </span>
   );
@@ -109,7 +109,7 @@ export function PageHeader({
 }) {
   return (
     <header className="mb-6 mt-2">
-      {eyebrow && <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{eyebrow}</p>}
+      {eyebrow && <p className="mb-1 font-mono text-xs text-muted">{eyebrow}</p>}
       <h1 className="font-display text-[30px] leading-[1.1] md:text-[38px]">{title}</h1>
       {subtitle && <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted">{subtitle}</p>}
     </header>

@@ -48,16 +48,16 @@ export default function ExplorePage() {
                   onClick={() => setDomainId(domainId === d.id ? null : d.id)}
                   aria-pressed={domainId === d.id}
                   className={cx(
-                    "inline-flex min-h-11 items-center gap-2 rounded-full border py-1.5 pl-2 pr-3.5 text-sm font-semibold transition-[transform,background-color,border-color] duration-200 active:scale-[0.97]",
-                    domainId === d.id ? "border-transparent shadow-inner" : "btn-raised",
+                    "inline-flex min-h-11 items-center gap-2 rounded-md border py-1.5 pl-2 pr-3.5 text-sm font-semibold transition-[transform,background-color,border-color] duration-200 active:scale-[0.97]",
+                    domainId === d.id ? "border-transparent" : "btn-raised",
                   )}
-                  style={domainId === d.id ? domainStyle(d.slug) : undefined}
+                  style={domainId === d.id ? { background: "var(--ink)", color: "var(--paper)" } : undefined}
                 >
                   <span style={domainStyle(d.slug)} className="flex size-7 items-center justify-center rounded-full">
                     <DomainIcon slug={d.slug} size={15} />
                   </span>
                   {d.name}
-                  <span className="font-mono text-xs text-muted">{d.role_count.toLocaleString()}</span>
+                  <span className="font-mono text-xs opacity-70">{d.role_count.toLocaleString()}</span>
                 </button>
               </li>
             ) : (
@@ -69,7 +69,7 @@ export default function ExplorePage() {
         </ul>
       </section>
 
-      <div className="sticky top-12 z-20 -mx-4 space-y-2.5 bg-paper/95 px-4 pb-3 pt-2 backdrop-blur md:top-0 md:mx-0 md:px-0">
+      <div className="sticky top-12 z-20 -mx-4 space-y-2.5 bg-paper px-4 pb-3 pt-2 md:top-0 md:mx-0 md:px-0">
         <div className="flex items-center gap-2 rounded-xl border border-line bg-surface px-3 focus-within:border-accent">
           <SearchIcon width={18} height={18} className="text-muted" />
           <label htmlFor="explore-search" className="sr-only">

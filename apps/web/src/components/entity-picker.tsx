@@ -134,14 +134,14 @@ export function EntityPicker({
 
       {quickPicks.length > 0 && !q && (
         <div className="mb-3">
-          <p className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">Popular with management students</p>
+          <p className="mb-1.5 font-mono text-xs text-muted">Popular with management students</p>
           <ul className="flex flex-wrap gap-1.5" aria-label={`Popular ${label.toLowerCase()} for management students`}>
             {quickPicks.map((item) => (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => pick(item)}
-                  className="btn-raised inline-flex min-h-9 items-center rounded-full px-3 text-sm font-semibold"
+                  className="btn-raised inline-flex min-h-9 items-center rounded-md px-3 text-sm font-semibold"
                 >
                   + {item.label}
                 </button>

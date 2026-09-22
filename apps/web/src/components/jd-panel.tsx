@@ -122,7 +122,7 @@ function SkillChips({ skills, all }: { skills: JDSkill[]; all: boolean }) {
         <li key={s.capability_id}>
           <span
             className={cx(
-              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+              "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold",
               s.user_has_it ? "bg-good-soft text-good" : "border border-line",
             )}
           >

@@ -12,7 +12,7 @@ import { Sheet } from "./sheet";
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-5">
-      <h3 className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">{title}</h3>
+      <h3 className="mb-1.5 font-mono text-xs text-muted">{title}</h3>
       <ul className="divide-y divide-line rounded-xl border border-line bg-surface">{children}</ul>
     </section>
   );

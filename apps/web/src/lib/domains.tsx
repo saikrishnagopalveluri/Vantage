@@ -57,24 +57,6 @@ const GLYPHS: Record<string, ReactNode> = {
   hospitality: <path d="M5 8h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h2a2 2 0 0 1 0 4h-2M8 3v2M12 3v2" />,
 };
 
-/** 24 fields share ten muted hues, grouped by neighbourhood, so the palette stays calm. */
-const HUE: Record<string, string> = {
-  b2b: "sales",
-  "digital-transformation": "consulting",
-  "platform-business": "product-design",
-  engineering: "operations",
-  trades: "operations",
-  agriculture: "finance",
-  admin: "consulting",
-  healthcare: "it-security",
-  science: "data-ai",
-  education: "software",
-  legal: "consulting",
-  "public-services": "operations",
-  "creative-media": "product-design",
-  hospitality: "marketing",
-};
-
 const NAME_TO_SLUG: Record<string, string> = {
   "Marketing": "marketing",
   "Finance & Banking": "finance",
@@ -114,9 +96,9 @@ export function DomainIcon({ slug, size = 20 }: { slug: string; size?: number })
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth="1.75"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden
     >
       {GLYPHS[slug] ?? GLYPHS.consulting}
@@ -124,18 +106,15 @@ export function DomainIcon({ slug, size = 20 }: { slug: string; size?: number })
   );
 }
 
-/** Tinted background + readable ink, defined per theme in globals.css. */
-export const domainStyle = (slug: string) => ({
-  background: `var(--d-${HUE[slug] ?? slug}-bg)`,
-  color: `var(--d-${HUE[slug] ?? slug}-ink)`,
-});
+/** One neutral chip for every field. The glyph and the name tell fields apart, not a colour. */
+export const domainStyle = (_slug: string) => ({ background: "var(--sunken)", color: "var(--ink)" });
 
 export function DomainBadge({ name, slug, compact = false }: { name: string; slug?: string; compact?: boolean }) {
   const key = slug ?? slugFor(name);
   return (
     <span
       style={domainStyle(key)}
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+      className="inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-0.5 text-xs font-semibold"
     >
       <DomainIcon slug={key} size={13} />
       {!compact && name}

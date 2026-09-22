@@ -29,12 +29,12 @@ export default async function SharedResult({ searchParams }: Props) {
   const r = parseResult(await searchParams);
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col justify-center px-4 py-10">
-      <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">Vantage pop quiz</p>
+      <p className="font-mono text-xs text-accent">Vantage pop quiz</p>
       <h1 className="mt-2 font-display text-[34px] leading-[1.1]">
         Someone scored {r.score.toLocaleString("en-IN")}. Can you beat it?
       </h1>
       <section aria-label="The result" className="raised mt-6 rounded-2xl p-6 text-center">
-        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Title</p>
+        <p className="font-mono text-xs text-muted">Title</p>
         <p className="mt-1 font-display text-4xl text-accent">{RANKS[r.rank].title}</p>
         <p className="mt-5 font-display text-7xl tabular-nums">{r.score.toLocaleString("en-IN")}</p>
         <p className="text-muted">points</p>

@@ -18,3 +18,6 @@ playwright-report/
 
 # local run logs
 *.log
+
+# /brag launch-video output (large media, not source)
+brag-output/

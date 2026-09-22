@@ -379,7 +379,7 @@ export function QuizGame({ userId, onClose }: { userId: string; onClose: () => v
             {(phase === "playing" || phase === "revealed") && (
               <p className="mr-2 text-right leading-tight" aria-live="off">
                 <span className="block font-display text-2xl tabular-nums">{game.score.toLocaleString("en-IN")}</span>
-                <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-muted">points</span>
+                <span className="block font-mono text-xs text-muted">points</span>
               </p>
             )}
             <SoundToggle />
@@ -404,7 +404,7 @@ export function QuizGame({ userId, onClose }: { userId: string; onClose: () => v
 
         {phase === "intro" && (
           <div className="rise my-auto py-6">
-            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">Pop quiz</p>
+            <p className="font-mono text-xs text-accent">Pop quiz</p>
             <h1 id={titleId} ref={heading} tabIndex={-1} className="mt-2 font-display text-[40px] leading-[1.05] outline-none">
               How well do you know your field?
             </h1>
@@ -477,7 +477,7 @@ export function QuizGame({ userId, onClose }: { userId: string; onClose: () => v
               {question.prompt}
             </h2>
             {question.context && (
-              <blockquote className="mt-4 border-l-2 border-accent pl-4 font-display text-[19px] italic leading-snug">{question.context}</blockquote>
+              <blockquote className="mt-4 font-display text-[19px] italic leading-snug">&ldquo;{question.context}&rdquo;</blockquote>
             )}
 
             <div role="group" aria-labelledby={titleId} className="mt-6 grid gap-2.5">
@@ -534,7 +534,7 @@ export function QuizGame({ userId, onClose }: { userId: string; onClose: () => v
         {phase === "over" && (
           <div className="rise flex flex-col gap-5 py-2">
             <div>
-              <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">Game over</p>
+              <p className="font-mono text-xs text-accent">Game over</p>
               <h1 id={titleId} ref={heading} tabIndex={-1} className="mt-1 font-display text-[34px] leading-[1.1] outline-none">
                 You made it to {rank.title}
               </h1>
