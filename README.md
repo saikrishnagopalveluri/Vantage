@@ -21,13 +21,13 @@ Twenty-four fields of work, from Marketing, Finance, Sales and HR through Softwa
 
 Only the hand-written roles, skills and companies, plus imported company names that are distinctive enough (for example "Reliance Industries" but not "First Bank"), are used to tag news. The rest are there to search, pick and compare, so 45,000 titles can't drown the feed in false matches.
 
-News comes from about 195 official RSS and Atom feeds, 26 of them newsletters (see below). We store the headline, link, publisher, a 300-character teaser and up to 1,600 characters of the feed's own text, which is used only to build the expandable summary. We never store full articles. Many publishers only share a headline and a teaser in their feed. For those, the summary says so and links to the article.
+News comes from about 200 official RSS and Atom feeds, 26 of them newsletters (see below). We store the headline, link, publisher, a 300-character teaser and up to 1,600 characters of the feed's own text, which is used only to build the expandable summary. We never store full articles. Many publishers only share a headline and a teaser in their feed. For those, the summary says so and links to the article.
 
 ### Consulting, IT services and digital transformation
 
 The firms a management student meets are covered in depth: the Big 4 and the mid-tier accounting and advisory firms (Grant Thornton, BDO, RSM, Forvis Mazars and others), the strategy houses (McKinsey, BCG, Bain, Kearney, Oliver Wyman, Simon-Kucher, AlixPartners and more), HR and talent consultancies (Mercer, Aon, WTW, Korn Ferry), research firms (Gartner, IDC, Forrester, Everest, Zinnov), the IT services companies (Cognizant, LTIMindtree, Mphasis, Persistent, Coforge, Thoughtworks, Publicis Sapient and more) and the platforms digital transformation is built on. Common sub-brands are aliases, so a headline that says "Deloitte India" or "EY-Parthenon" is found. Consulting and transformation roles run from Associate Consultant to Partner, and from Digital Transformation Consultant to Presales Consultant. The new lists are in `apps/api/app/seed_data/expansion.py`.
 
-Big 4, IT services and many consulting firms publish no feed of their own, so their news comes through Google News searches (official RSS) in `seed_data/sources.py`. A few sites block automated readers (Tech Brew, Morning Brew, Technology Magazine, Reuters and others), and those are left out rather than worked around. Morning Brew Daily is a podcast feed with no page per episode, so its stories link to the show's site.
+Big 4, IT services and many consulting firms publish no feed of their own, so their news comes through Google News searches (official RSS) in `seed_data/sources.py`. A few sites block automated readers outright, even a Google News redirect (Technology Magazine, Reuters and others), and those are left out rather than worked around. Tech Brew and Morning Brew also block direct feed reads, but their stories are public on Google News, so they come in through a `site:` search instead. Morning Brew Daily is a podcast feed with no page per episode, so its stories link to the show's site.
 
 ### Newsletters
 

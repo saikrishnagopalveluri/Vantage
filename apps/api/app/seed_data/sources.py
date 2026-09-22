@@ -199,6 +199,9 @@ SOURCES: list[tuple[str, str, int]] = [
     ("Google News - Management consulting", "https://news.google.com/rss/search?q=%22management+consulting%22&hl=en-IN&gl=IN&ceid=IN:en", 3),
     ("Google News - Technology (India)", "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-IN&gl=IN&ceid=IN:en", 3),
     ("Google News - Business (India)", "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-IN&gl=IN&ceid=IN:en", 3),
+    # Tech Brew and Morning Brew block automated feed readers with a Cloudflare challenge, so their
+    # stories come through a Google News site: search instead of a direct feed.
+    ("Google News - Tech Brew, Morning Brew", "https://news.google.com/rss/search?q=site:techbrew.com+OR+site:morningbrew.com&hl=en-US&gl=US&ceid=US:en", 4),
     ("Morning Brew Daily", "https://www.mbdailyshow.com/feed", 4),
 ]
 
