@@ -18,6 +18,7 @@ const QuizGame = dynamic(() => import("./quiz-game").then((m) => m.QuizGame), { 
 const SpeedRound = dynamic(() => import("./speed-round").then((m) => m.SpeedRound), { ssr: false });
 const MatchField = dynamic(() => import("./match-field").then((m) => m.MatchField), { ssr: false });
 const WordDrop = dynamic(() => import("./word-drop").then((m) => m.WordDrop), { ssr: false });
+const ConnectDots = dynamic(() => import("./connect-dots").then((m) => m.ConnectDots), { ssr: false });
 
 const NAV = [
   { href: "/feed", label: "Feed", Icon: FeedIcon },
@@ -43,6 +44,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
   const [speedRound, setSpeedRound] = useState(false);
   const [matchField, setMatchField] = useState(false);
   const [wordDrop, setWordDrop] = useState(false);
+  const [connectDots, setConnectDots] = useState(false);
   const [picker, setPicker] = useState(false);
   const openQuiz = useCallback(() => setQuiz(true), []);
   const openPicker = useCallback(() => setPicker(true), []);
@@ -52,6 +54,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
     if (id === "speed-round") setSpeedRound(true);
     if (id === "match-field") setMatchField(true);
     if (id === "word-drop") setWordDrop(true);
+    if (id === "connect-dots") setConnectDots(true);
   }, []);
   const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -174,6 +177,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       {speedRound && profile && <SpeedRound userId={profile.user_id} onClose={() => setSpeedRound(false)} />}
       {matchField && <MatchField onClose={() => setMatchField(false)} />}
       {wordDrop && <WordDrop onClose={() => setWordDrop(false)} />}
+      {connectDots && <ConnectDots onClose={() => setConnectDots(false)} />}
     </div>
   );
 }
