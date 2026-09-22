@@ -99,6 +99,13 @@ export const PlusIcon = (p: P) => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
+export const WordIcon = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="3" y="9" width="5" height="6" rx="1" />
+    <rect x="9.5" y="9" width="5" height="6" rx="1" />
+    <rect x="16" y="9" width="5" height="6" rx="1" />
+  </svg>
+);
 export const LinkIcon = (p: P) => (
   <svg {...base(p)}>
     <circle cx="6" cy="7" r="3" />
