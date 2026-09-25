@@ -48,6 +48,7 @@ interface State {
   summary: Feed["summary"] | null;
   hasMore: boolean;
   error: string | null;
+  asOf: string | null;
 }
 
 function summaryLine(s: Feed["summary"] | null): string {
@@ -126,7 +127,7 @@ export default function FeedPage() {
   const [lens, setLens] = useState<Lens>("for_you");
   const [domainId, setDomainId] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [state, setState] = useState<State>({ at: 0, key: "", items: [], summary: null, hasMore: false, error: null });
+  const [state, setState] = useState<State>({ at: 0, key: "", items: [], summary: null, hasMore: false, error: null, asOf: null });
   const [now, setNow] = useState(() => Date.now());
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -144,7 +145,7 @@ export default function FeedPage() {
     api.feed(userId, lens, 0, domainId, controller.signal).then(
       (feed) => {
         if (controller.signal.aborted) return;
-        setState({ at: Date.now(), key, items: feed.items, summary: feed.summary, hasMore: feed.has_more, error: null });
+        setState({ at: Date.now(), key, items: feed.items, summary: feed.summary, hasMore: feed.has_more, error: null, asOf: feed.as_of });
       },
       (error: Error) => {
         if (!controller.signal.aborted) setState((s) => ({ ...s, key, error: error.message }));
@@ -200,7 +201,7 @@ export default function FeedPage() {
   const loadMore = useCallback(async () => {
     setLoadingMore(true);
     try {
-      const page = await api.feed(userId, lens, state.items.length, domainId);
+      const page = await api.feed(userId, lens, state.items.length, domainId, undefined, state.asOf ?? undefined);
       setState((s) => {
         const seen = new Set(s.items.map((i) => i.id));
         return { ...s, items: [...s.items, ...page.items.filter((i) => !seen.has(i.id))], hasMore: page.has_more };
@@ -210,7 +211,7 @@ export default function FeedPage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [userId, lens, domainId, state.items.length, toast]);
+  }, [userId, lens, domainId, state.items.length, state.asOf, toast]);
 
   // Load the next page when the reader gets near the end.
   const sentinel = useRef<HTMLDivElement>(null);

@@ -64,7 +64,8 @@ def onboard(
 
     if db.get(Account, user_id) is None:
         record_consent(db, user_id, body.consent, "guest")
-    db.add(User(id=user_id))
+    name = body.name.strip() if body.name else None
+    db.add(User(id=user_id, name=name or None))
     db.flush()
     db.add(profile)
     db.add_all(UserDomain(user_id=user_id, domain_id=i) for i in domain_ids)

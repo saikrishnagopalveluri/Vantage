@@ -233,7 +233,7 @@ NEWSLETTERS: list[tuple[str, str, int]] = [
     ("The Looking Glass", "https://lg.substack.com/feed", 3),
     ("Shreyas Doshi", "https://shreyasdoshi.substack.com/feed", 3),
     ("The Playbook (Morning Brew)", "https://www.theplaybookmb.com/feed.xml", 4),
-    ("So, What's the Big News?", "https://shailendrabisht.substack.com/feed", 3),
+    ("So, What's the Big News?", "https://shailendrabisht.substack.com/feed", 5),
 ]
 NEWSLETTER_NAMES = frozenset(name for name, _, _ in NEWSLETTERS)
 SOURCES += NEWSLETTERS

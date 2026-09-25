@@ -11,6 +11,7 @@ export async function agree(page: Page) {
 /** Walk the real onboarding as a student who wants Marketing and Brand Manager, and land on the feed. */
 export async function onboardAsStudent(page: Page) {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();

@@ -23,6 +23,7 @@ export interface Brief { paragraphs: string[]; pointers: string[]; note: string 
 
 export interface Profile {
   user_id: string;
+  name: string | null;
   profile_status: ProfileStatus;
   current_role: RoleRef | null;
   current_company: NamedRef | null;
@@ -60,6 +61,7 @@ export interface Feed {
   items: FeedItem[];
   offset: number;
   has_more: boolean;
+  as_of: string;
 }
 
 export interface SavedItem {
@@ -156,6 +158,7 @@ export interface LegalInfo {
 }
 
 export interface OnboardingBody extends TargetsBody {
+  name?: string | null;
   consent?: ConsentBody | null;
   current?: { company_id: string; role_id: string; industry_id?: string | null } | null;
 }

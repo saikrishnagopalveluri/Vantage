@@ -221,6 +221,7 @@ async function agree(page: Page) {
 
 async function openFirstSummary(page: Page) {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();

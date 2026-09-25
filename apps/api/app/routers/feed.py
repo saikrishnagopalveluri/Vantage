@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -62,12 +64,18 @@ def get_feed(
     domain_id: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0),
+    as_of: datetime | None = None,
     db: Session = Depends(get_db),
     caller_id: str = Depends(get_caller_id),
 ) -> FeedOut:
+    """`as_of` pins ranking and candidate selection to a moment in time. The first page of a
+    session leaves it out and gets today's ranking back in the response; every later page of
+    that same scroll echoes it back, so a story ingested (or re-scored) mid-scroll can't shift
+    the ranked order under the reader's feet and reappear as a "new" story a few pages later."""
     require_self(user_id, caller_id)
     profile = _profile(db, user_id)
-    ranked = rank(db, profile, load_context(db, profile), lens, domain_id=domain_id)
+    now = as_of.astimezone(timezone.utc) if as_of else datetime.now(timezone.utc)
+    ranked = rank(db, profile, load_context(db, profile), lens, now=now, domain_id=domain_id)
 
     page = ranked[offset : offset + limit]
     saved = set(
@@ -111,6 +119,7 @@ def get_feed(
         ],
         offset=offset,
         has_more=offset + limit < len(ranked),
+        as_of=now,
     )
 
 

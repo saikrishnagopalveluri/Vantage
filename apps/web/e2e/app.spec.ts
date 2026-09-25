@@ -12,6 +12,7 @@ async function agree(page: Page) {
 /** Walk the real onboarding as a student who wants Marketing / Brand Manager. */
 async function onboardAsStudent(page: Page) {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -59,6 +60,7 @@ test("a story's summary and pointers stay hidden until you ask for them", async 
 
 test("a reader can follow at most four fields", async ({ page }) => {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -79,6 +81,7 @@ test("a reader can follow at most four fields", async ({ page }) => {
 
 test("chosen fields stay in view as removable chips", async ({ page }) => {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -114,6 +117,7 @@ test("the app shell appears before the profile has loaded", async ({ page }) => 
 
 test("management students get quick picks for roles, companies and skills", async ({ page }) => {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -137,6 +141,7 @@ test("management students get quick picks for roles, companies and skills", asyn
 
 test("the new fields are there: digital transformation, platform businesses and B2B", async ({ page }) => {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -224,6 +229,7 @@ test("an account: sign up, onboard, see the email, log out, log back in", async 
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("**/onboarding");
 
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await agree(page);
   await page.getByRole("button", { name: "Continue" }).click();
@@ -252,6 +258,7 @@ test("an account: sign up, onboard, see the email, log out, log back in", async 
 
 test("nothing is kept until a guest confirms their age and agrees to the terms", async ({ page }) => {
   await page.goto("/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   const next = page.getByRole("button", { name: "Continue" });
   await expect(next).toBeDisabled();
@@ -302,6 +309,7 @@ test("deleting an account asks for the password first", async ({ page }) => {
   await agree(page);
   await page.getByRole("button", { name: "Create account" }).click();
   await page.waitForURL("**/onboarding");
+  await page.getByLabel("What's your name?").fill("Asha Verma");
   await page.getByRole("radio", { name: /I'm a student/ }).click();
   await expect(page.getByLabel("I am 18 or older.")).toHaveCount(0); // an account already agreed
   await page.getByRole("button", { name: "Continue" }).click();

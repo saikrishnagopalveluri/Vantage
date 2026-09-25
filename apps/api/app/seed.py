@@ -133,12 +133,15 @@ def seed_taxonomy(db: Session) -> None:
 
 
 def seed_sources(db: Session) -> None:
-    existing = {s.name for s in db.query(Source)}
-    db.add_all(
-        Source(name=n, feed_url=u, authority=a)
-        for n, u, a in [*SOURCES, SAMPLE_SOURCE]
-        if n not in existing
-    )
+    existing = {s.name: s for s in db.query(Source)}
+    for name, url, authority in [*SOURCES, SAMPLE_SOURCE]:
+        source = existing.get(name)
+        if source is None:
+            db.add(Source(name=name, feed_url=url, authority=authority))
+        else:
+            # feed_url/authority are data corrections (a broken feed, a source re-ranked), so a
+            # source already in the database still needs to pick these up on every sync.
+            source.feed_url, source.authority = url, authority
     db.commit()
 
 

@@ -115,7 +115,7 @@ INDUSTRY_DOMAINS: dict[str, tuple[str, ...]] = {
 
 # Skills and tools shared across domains.
 GENERAL_CAPABILITIES = """
-Excel | T | Microsoft Excel
+Excel | T | Microsoft Excel | avoid:Surf Excel
 PowerPoint | T | Microsoft PowerPoint
 Google Sheets | T
 SQL | T

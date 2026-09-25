@@ -129,6 +129,26 @@ def test_pagination(client, feed_world):
     assert first["summary"]["total"] == 4
 
 
+def test_as_of_pins_recency_scoring_across_a_scroll_session(client, feed_world):
+    """Every page must echo back the `as_of` the first page used, and every later page in that
+    scroll must use it too — otherwise the ranking (which scores recency against "now") reshuffles
+    between page loads and the same story can reappear a few pages later under a new leader."""
+    first = fetch(client)
+    as_of = first["as_of"]
+    assert as_of
+
+    pinned_full = fetch(client, limit=10, as_of=as_of)
+    page1 = fetch(client, limit=2, as_of=as_of)
+    page2 = fetch(client, limit=2, offset=2, as_of=as_of)
+    assert [i["id"] for i in page1["items"]] + [i["id"] for i in page2["items"]] == [i["id"] for i in pinned_full["items"]]
+    assert page1["as_of"] == page2["as_of"] == as_of
+
+    stale = fetch(client, limit=10, as_of=(datetime.now(timezone.utc) + timedelta(days=30)).isoformat())
+    fresh_score = next(i["score"] for i in pinned_full["items"] if i["url"].endswith("/hul"))
+    stale_score = next(i["score"] for i in stale["items"] if i["url"].endswith("/hul"))
+    assert stale_score < fresh_score  # the same story, scored as if 30 days older
+
+
 def test_old_articles_are_outside_the_window_and_stale_ones_score_lower(client, db, feed_world):
     source = db.query(Source).one()
     ingest_entries(
@@ -147,7 +167,9 @@ def test_old_articles_are_outside_the_window_and_stale_ones_score_lower(client, 
 
 
 def test_a_user_with_no_targets_gets_an_empty_feed(client, feed_world):
-    assert fetch(client, user="u2") == {
+    body = fetch(client, user="u2")
+    assert body.pop("as_of")
+    assert body == {
         "lens": "for_you",
         "summary": {"total": 0, "critical": 0, "relevant": 0, "explore": 0},
         "items": [],

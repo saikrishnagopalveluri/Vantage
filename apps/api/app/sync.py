@@ -61,10 +61,13 @@ def sync_taxonomy(db: Session) -> dict[str, int]:
             )
             db.add(cap)
             added["capabilities"] += 1
-        elif cap.source != "curated":
-            cap.source, cap.taggable = "curated", spec.taggable
+        else:
+            if cap.source != "curated":
+                cap.source, cap.taggable = "curated", spec.taggable
+                added["promoted"] += 1
+            # Blockers/aliases are data corrections (a false-positive tag found in production), so a
+            # curated row already in the database still needs to pick these up on every sync.
             cap.aliases, cap.blockers, cap.domain_id = list(spec.aliases), list(spec.blockers), domain_id
-            added["promoted"] += 1
         cap.mba = spec.name in MBA_SKILLS
         spec_caps[spec.name] = cap
 

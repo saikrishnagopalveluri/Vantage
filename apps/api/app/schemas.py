@@ -56,6 +56,7 @@ class CompanyOut(BaseModel):
 
 class CurrentState(BaseModel):
     user_id: str
+    name: str | None = None
     profile_status: ProfileStatus
     current_role: RoleRef | None
     current_company: NamedRef | None
@@ -95,6 +96,8 @@ class TargetsIn(BaseModel):
 
 
 class OnboardingIn(TargetsIn):
+    # The app's own form always asks for this; optional here so older/test clients still work.
+    name: str | None = Field(default=None, max_length=120)
     # Set for someone who already works; leave out for a student.
     current: CurrentIn | None = None
     # A guest agrees to the terms and privacy policy here. An account already did when it signed up.
@@ -245,6 +248,7 @@ class FeedOut(BaseModel):
     items: list[FeedItem]
     offset: int
     has_more: bool
+    as_of: datetime
 
 
 class InteractionIn(BaseModel):

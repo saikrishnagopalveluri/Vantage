@@ -80,6 +80,7 @@ NEGATIVE = [
     case("Deforestation in the Amazon accelerates"),
     case("Rust Belt manufacturers brace for change", topic=[]),
     case("How to excel at your next interview"),
+    case("Amazon once sold a Rs 185 Surf Excel pack for Rs 82,740", company=["Amazon India"]),
     case("Apple juice prices climb as harvest shrinks"),
     case("Taylor Swift tour boosts local economies"),
     case("Oracle of Omaha Warren Buffett buys more shares"),

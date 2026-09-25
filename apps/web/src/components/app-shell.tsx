@@ -145,7 +145,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
         </nav>
         <div className="raised mt-auto rounded-xl p-3 text-sm">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-muted">You&apos;re reading as</p>
+            <p className="text-muted">{profile?.name ? `Hi, ${profile.name.split(" ")[0]}` : "You're reading as"}</p>
             {streak && <StreakBadge streak={streak} />}
           </div>
           {profile ? (

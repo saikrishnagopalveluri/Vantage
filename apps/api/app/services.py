@@ -54,6 +54,7 @@ def current_state(profile: UserProfile) -> dict:
     company, industry = profile.current_company, profile.current_industry
     return {
         "user_id": profile.user_id,
+        "name": profile.user.name if profile.user else None,
         "profile_status": profile.profile_status,
         "current_role": role_ref(profile.current_role) if profile.current_role else None,
         "current_company": NamedRef(id=company.id, name=company.name) if company else None,

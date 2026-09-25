@@ -160,6 +160,7 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
     email: Mapped[str | None] = mapped_column(String, unique=True)
+    name: Mapped[str | None] = mapped_column(String(120))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
@@ -201,6 +202,7 @@ class UserProfile(Base):
     current_role: Mapped[Role | None] = relationship(foreign_keys=[current_role_id])
     current_company: Mapped[Company | None] = relationship(foreign_keys=[current_company_id])
     current_industry: Mapped[Industry | None] = relationship(foreign_keys=[current_industry_id])
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
 
 
 class UserTargetRole(Base):

@@ -38,6 +38,7 @@ function Heading({ title, hint }: { title: string; hint?: string }) {
 export default function OnboardingPage() {
   const router = useRouter();
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [name, setName] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
   const [domainIds, setDomainIds] = useState<string[]>([]);
   const [roles, setRoles] = useState<PickItem[]>([]);
@@ -61,7 +62,7 @@ export default function OnboardingPage() {
 
   const canContinue =
     step === "persona"
-      ? persona !== null && (signedIn || consent !== null)
+      ? name.trim().length > 0 && persona !== null && (signedIn || consent !== null)
       : step === "current"
         ? currentCompany.length === 1 && currentRole.length === 1 && (!needsIndustry || industryId !== "")
         : step === "fields"
@@ -75,6 +76,7 @@ export default function OnboardingPage() {
     if (!account) setUserId(createUserId());
     try {
       await api.onboard({
+        name: name.trim(),
         domain_ids: domainIds,
         target_role_ids: roles.map((r) => r.id),
         target_company_ids: companies.map((c) => c.id),
@@ -126,7 +128,22 @@ export default function OnboardingPage() {
           {step === "persona" && (
             <>
               <Heading title="Career news that fits you." hint="Vantage reads business and tech news, then tells you why each story matters for your job hunt or your job." />
-              <p className="mt-5 text-[15px] font-semibold">Where are you right now?</p>
+              <div className="mt-5">
+                <label htmlFor="name" className="mb-2 block text-[15px] font-semibold">
+                  What&apos;s your name?
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  maxLength={120}
+                  autoComplete="name"
+                  className="min-h-11 w-full rounded-xl border border-line bg-surface px-3 text-base"
+                />
+              </div>
+              <p className="mt-6 text-[15px] font-semibold">Where are you right now?</p>
               <div className="mt-3 grid gap-3" role="radiogroup" aria-label="Where are you right now?">
                 {PERSONAS.map((p) => (
                   <button
