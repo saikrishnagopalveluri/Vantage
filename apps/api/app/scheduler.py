@@ -1,13 +1,16 @@
-"""Scheduled ingestion: feeds are pulled every hour, and once a day old stories are pruned.
+"""Scheduled ingestion: feeds are pulled every hour, and once a day old stories are pruned. Also
+runs the daily streak-reminder push, on its own schedule and its own table so it never waits on
+an ingest and vice versa.
 
 Two ways to run it, and both are safe to use together:
   * inside the API process (on by default; set VANTAGE_SCHEDULER=0 to turn it off), or
   * as its own process: `python -m app.scheduler`.
-Runs are recorded in `ingest_runs`, so a restart doesn't repeat a run that just happened and two
-processes never ingest at the same time.
+Runs are recorded in `ingest_runs` (feeds) and `notification_runs` (push), so a restart doesn't
+repeat a run that just happened and two processes never do the same work twice.
 
-  VANTAGE_INGEST_EVERY_MINUTES   how often to pull the feeds (default 60)
-  VANTAGE_DAILY_HOUR_UTC         hour of the day for the daily clean-up (default 3)
+  VANTAGE_INGEST_EVERY_MINUTES     how often to pull the feeds (default 60)
+  VANTAGE_DAILY_HOUR_UTC           hour of the day for the daily clean-up (default 3)
+  VANTAGE_STREAK_REMINDER_HOUR_UTC hour of the day for the streak-at-risk push (default 14)
 """
 
 import logging
@@ -21,7 +24,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import SessionLocal, engine
 from app.ingest import MAX_ENTRY_AGE_DAYS, run_all
-from app.models import Article, ArticleTag, Base, IngestRun, Source, UserInteraction
+from app.models import Article, ArticleTag, Base, IngestRun, NotificationRun, Source, UserInteraction
+from app.push import send_streak_reminders
 
 log = logging.getLogger("vantage.scheduler")
 
@@ -101,6 +105,50 @@ def is_due(db: Session, kind: str, now: datetime, *, every: timedelta | None = N
     return last is None or last.date() < now.date()
 
 
+def _claim_notification(db: Session, kind: str, now: datetime) -> NotificationRun | None:
+    """Same shape as _claim, for notification jobs — their own table, so a slow ingest run never
+    blocks a reminder (or the other way round)."""
+    running = db.scalars(select(NotificationRun).where(NotificationRun.finished_at.is_(None))).all()
+    if any(now - _utc(r.started_at) < STALE_AFTER for r in running):
+        return None
+    for r in running:
+        r.finished_at, r.error = now, "Did not finish (process stopped)"
+    run = NotificationRun(kind=kind, started_at=now)
+    db.add(run)
+    db.commit()
+    return run
+
+
+def is_notification_due(db: Session, kind: str, now: datetime, hour: int) -> bool:
+    if now.hour < hour:
+        return False
+    last = _utc(
+        db.scalar(select(NotificationRun.started_at).where(NotificationRun.kind == kind).order_by(NotificationRun.started_at.desc()).limit(1))
+    )
+    return last is None or last.date() < now.date()
+
+
+def run_streak_reminders(session_factory: sessionmaker, now: datetime | None = None) -> NotificationRun | None:
+    """Once a day, nudge anyone with an active streak they haven't touched yet today."""
+    now = now or datetime.now(timezone.utc)
+    with session_factory() as db:
+        run = _claim_notification(db, "streak_reminder", now)
+        if run is None:
+            log.info("skipping streak_reminder run: another run is in progress")
+            return None
+        try:
+            run.sent = send_streak_reminders(db, now.date())
+        except Exception as exc:  # noqa: BLE001 - the scheduler must outlive any one bad run
+            db.rollback()
+            run.error = f"{type(exc).__name__}: {exc}"[:500]
+            log.exception("streak reminder run failed")
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(run)
+        log.info("streak reminders: %s sent", run.sent)
+        return run
+
+
 class Scheduler:
     """Checks every 30 seconds whether the hourly or daily job is due."""
 
@@ -110,11 +158,17 @@ class Scheduler:
         *,
         every_minutes: int | None = None,
         daily_hour: int | None = None,
+        streak_reminder_hour: int | None = None,
         ingest: Callable[[Session], dict[str, int]] = run_all,
     ) -> None:
         self.session_factory = session_factory
         self.every = timedelta(minutes=every_minutes or int(os.getenv("VANTAGE_INGEST_EVERY_MINUTES", "60")))
         self.daily_hour = daily_hour if daily_hour is not None else int(os.getenv("VANTAGE_DAILY_HOUR_UTC", "3"))
+        # Default 14:00 UTC ~= 7:30pm IST: late enough that "you haven't opened it today" is true and
+        # relevant, early enough that it isn't a middle-of-the-night ping for the app's India-hours base.
+        self.streak_reminder_hour = (
+            streak_reminder_hour if streak_reminder_hour is not None else int(os.getenv("VANTAGE_STREAK_REMINDER_HOUR_UTC", "14"))
+        )
         self.ingest = ingest
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -125,10 +179,13 @@ class Scheduler:
         with self.session_factory() as db:
             daily = is_due(db, "daily", now, daily_hour=self.daily_hour)
             hourly = is_due(db, "hourly", now, every=self.every)
+            streak_reminder = is_notification_due(db, "streak_reminder", now, self.streak_reminder_hour)
         ran = []
         for kind, due in (("daily", daily), ("hourly", hourly and not daily)):
             if due and run_job(self.session_factory, kind, self.ingest, now) is not None:
                 ran.append(kind)
+        if streak_reminder and run_streak_reminders(self.session_factory, now) is not None:
+            ran.append("streak_reminder")
         return ran
 
     def _loop(self) -> None:
@@ -143,7 +200,12 @@ class Scheduler:
         if self._thread is None:
             self._thread = threading.Thread(target=self._loop, name="vantage-scheduler", daemon=True)
             self._thread.start()
-            log.info("scheduler started: feeds every %s, daily clean-up at %02d:00 UTC", self.every, self.daily_hour)
+            log.info(
+                "scheduler started: feeds every %s, daily clean-up at %02d:00 UTC, streak reminders at %02d:00 UTC",
+                self.every,
+                self.daily_hour,
+                self.streak_reminder_hour,
+            )
 
     def stop(self) -> None:
         self._stop.set()
@@ -162,8 +224,12 @@ if __name__ == "__main__":
     Base.metadata.create_all(bind=engine)
     if "--once" in sys.argv:
         kind = sys.argv[sys.argv.index("--once") + 1] if len(sys.argv) > sys.argv.index("--once") + 1 else "hourly"
-        result = run_job(SessionLocal, kind)
-        print(result and {"added": result.articles_added, "failed": result.sources_failed, "pruned": result.articles_pruned})
+        if kind == "streak_reminder":
+            reminder_run = run_streak_reminders(SessionLocal)
+            print(reminder_run and {"sent": reminder_run.sent})
+        else:
+            result = run_job(SessionLocal, kind)
+            print(result and {"added": result.articles_added, "failed": result.sources_failed, "pruned": result.articles_pruned})
     else:
         scheduler = Scheduler()
         scheduler.start()

@@ -20,6 +20,9 @@ import type {
   PlacementBody,
   PlacementResult,
   Profile,
+  PushCategories,
+  PushSubscribeBody,
+  PushSubscriptionInfo,
   Pulse,
   RoleDetail,
   RoleRef,
@@ -152,6 +155,17 @@ export const api = {
   saved: (userId: string, signal?: AbortSignal) => request<SavedItem[]>(`/feed/${userId}/saved`, { signal }),
   streak: (userId: string, signal?: AbortSignal) => request<Streak>(`/streaks/${userId}`, { signal }),
   touchStreak: (userId: string) => request<Streak>(`/streaks/${userId}/touch`, { method: "POST" }),
+
+  pushCategories: (signal?: AbortSignal) => request<PushCategories>("/push/categories", { signal }),
+  pushPublicKey: (userId: string, signal?: AbortSignal) =>
+    request<{ public_key: string | null }>(`/push/${userId}/public-key`, { signal }),
+  pushSubscriptions: (userId: string, signal?: AbortSignal) => request<PushSubscriptionInfo[]>(`/push/${userId}`, { signal }),
+  pushSubscribe: (userId: string, body: PushSubscribeBody) =>
+    request<PushSubscriptionInfo>(`/push/${userId}/subscribe`, { method: "POST", body }),
+  pushSetCategories: (userId: string, endpoint: string, categories: string[]) =>
+    request<PushSubscriptionInfo>(`/push/${userId}/categories`, { method: "PUT", body: { endpoint, categories } }),
+  pushUnsubscribe: (userId: string, endpoint: string) =>
+    request<void>(`/push/${userId}/unsubscribe`, { method: "POST", body: { endpoint } }),
   quiz: (userId: string, level: number, exclude: string[], count: number, signal?: AbortSignal) =>
     request<{ level: number; questions: QuizQuestion[] }>(`/quiz/${userId}${qs({ level, count, exclude: exclude.join(",") })}`, { signal }),
 

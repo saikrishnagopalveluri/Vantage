@@ -229,3 +229,23 @@ export interface Streak {
   longest_streak: number;
   active_today: boolean;
 }
+
+export type PushCategoryId = "streak" | "news" | "games" | "role_update" | "company_update";
+export type PushCategories = Record<string, string>; // category id -> display label
+
+export interface PushKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscribeBody {
+  endpoint: string;
+  keys: PushKeys;
+  categories: string[];
+}
+
+export interface PushSubscriptionInfo {
+  id: string;
+  endpoint: string;
+  categories: string[];
+}

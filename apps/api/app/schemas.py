@@ -5,9 +5,10 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.legal import ConsentIn
 from app.models import CapabilityKind, ProfileStatus
-
+from app.push import CATEGORIES as _PUSH_CATEGORY_LABELS
 
 MAX_FIELDS = 4  # fields of work a person can follow at once
+_PUSH_CATEGORIES = frozenset(_PUSH_CATEGORY_LABELS)
 
 
 def _as_utc(value: datetime | None) -> datetime | None:
@@ -266,6 +267,50 @@ class StreakOut(BaseModel):
     current_streak: int
     longest_streak: int
     active_today: bool
+
+
+class PushKeysIn(BaseModel):
+    p256dh: str = Field(min_length=1, max_length=200)
+    auth: str = Field(min_length=1, max_length=100)
+
+
+class PushSubscribeIn(BaseModel):
+    """The browser's own PushSubscription.toJSON() shape, plus which categories to send."""
+
+    endpoint: str = Field(min_length=1, max_length=2000)
+    keys: PushKeysIn
+    categories: list[str] = Field(default_factory=list, max_length=len(_PUSH_CATEGORIES))
+
+    @field_validator("categories")
+    @classmethod
+    def _known_categories(cls, v: list[str]) -> list[str]:
+        unknown = set(v) - _PUSH_CATEGORIES
+        if unknown:
+            raise ValueError(f"Unknown categories: {sorted(unknown)}")
+        return v
+
+
+class PushCategoriesIn(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=2000)
+    categories: list[str] = Field(default_factory=list, max_length=len(_PUSH_CATEGORIES))
+
+    @field_validator("categories")
+    @classmethod
+    def _known_categories(cls, v: list[str]) -> list[str]:
+        unknown = set(v) - _PUSH_CATEGORIES
+        if unknown:
+            raise ValueError(f"Unknown categories: {sorted(unknown)}")
+        return v
+
+
+class PushUnsubscribeIn(BaseModel):
+    endpoint: str = Field(min_length=1, max_length=2000)
+
+
+class PushSubscriptionOut(BaseModel):
+    id: str
+    endpoint: str
+    categories: list[str]
 
 
 class SavedItem(BaseModel):

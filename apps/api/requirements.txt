@@ -6,3 +6,4 @@ pytest>=8.3
 httpx>=0.27
 feedparser>=6.0
 psycopg[binary]>=3.2
+pywebpush>=2.0

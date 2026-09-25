@@ -362,3 +362,32 @@ class UserInteraction(Base):
     article_id: Mapped[str] = mapped_column(ForeignKey("articles.id"), primary_key=True)
     action: Mapped[InteractionAction] = mapped_column(_enum(InteractionAction), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class PushSubscription(Base):
+    """One browser's Web Push registration. `categories` is which notification kinds this device
+    wants; a user with several devices sets each one separately, the same as browser notification
+    permissions themselves are per-device."""
+
+    __tablename__ = "push_subscriptions"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    endpoint: Mapped[str] = mapped_column(String, unique=True)
+    p256dh: Mapped[str] = mapped_column(String)
+    auth: Mapped[str] = mapped_column(String)
+    categories: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class NotificationRun(Base):
+    """One scheduled pass of a push-notification job (kind e.g. 'streak_reminder'). Same
+    claim-and-dedup shape as IngestRun, so two scheduler processes never send the same batch twice."""
+
+    __tablename__ = "notification_runs"
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    kind: Mapped[str] = mapped_column(String, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent: Mapped[int] = mapped_column(default=0)
+    error: Mapped[str | None] = mapped_column(String)

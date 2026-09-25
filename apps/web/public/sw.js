@@ -1,5 +1,6 @@
-// Vantage service worker: app-shell + last-known-data offline support. Bump VERSION to invalidate.
-const VERSION = "v1";
+// Vantage service worker: app-shell + last-known-data offline support, plus push notifications.
+// Bump VERSION to invalidate.
+const VERSION = "v2";
 const SHELL_CACHE = `vantage-shell-${VERSION}`;
 const RUNTIME_CACHE = `vantage-runtime-${VERSION}`;
 const PRECACHE = ["/offline", "/icons/icon-192.png", "/icons/icon-512.png"];
@@ -29,6 +30,38 @@ self.addEventListener("activate", (event) => {
 // The app asks us to drop cached personal data when someone resets the device.
 self.addEventListener("message", (event) => {
   if (event.data === "clear-runtime") event.waitUntil(caches.delete(RUNTIME_CACHE));
+});
+
+// The server's payload is { title, body, url }; url is where a tap should land.
+self.addEventListener("push", (event) => {
+  let data = { title: "Vantage", body: "", url: "/feed" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {}
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url },
+    }),
+  );
+});
+
+// Focus an already-open tab on that page if there is one, otherwise open a new one.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/feed";
+  event.waitUntil(
+    (async () => {
+      const clientsList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const target = new URL(url, self.location.origin).href;
+      for (const client of clientsList) {
+        if (client.url === target && "focus" in client) return client.focus();
+      }
+      return self.clients.openWindow(url);
+    })(),
+  );
 });
 
 self.addEventListener("fetch", (event) => {

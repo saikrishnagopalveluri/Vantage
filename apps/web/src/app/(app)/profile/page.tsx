@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DomainGrid } from "@/components/domain-grid";
 import { EntityPicker, fromCapability, fromCompany, fromRole, type PickItem } from "@/components/entity-picker";
 import { InstallCard } from "@/components/install-card";
+import { NotificationsCard } from "@/components/notifications-card";
 import { PartnerBadge } from "@/components/partner-badge";
 import { useProfile } from "@/components/profile-context";
 import { Sheet } from "@/components/sheet";
@@ -400,6 +401,8 @@ export default function ProfilePage() {
       </Card>
 
       <InstallCard />
+
+      <NotificationsCard userId={profile.user_id} />
 
       <Card>
         <h2 className="font-display text-xl">Pop quiz</h2>

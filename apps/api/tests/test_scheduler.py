@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
-from app.models import Article, ArticleTag, IngestRun, InteractionAction, Source, UserInteraction
-from app.scheduler import STALE_AFTER, Scheduler, is_due, prune_articles, run_job
+from app.models import Article, ArticleTag, IngestRun, InteractionAction, NotificationRun, PushSubscription, Source, UserInteraction, UserStreak
+from app.scheduler import STALE_AFTER, Scheduler, is_due, prune_articles, run_job, run_streak_reminders
 
 UTC = timezone.utc
 NOW = datetime(2026, 9, 20, 10, 0, tzinfo=UTC)
@@ -32,13 +32,41 @@ def test_hourly_job_runs_when_due_and_not_again_within_the_hour(session_factory)
 
 
 def test_daily_job_waits_for_its_hour_and_runs_once_a_day(session_factory):
-    scheduler = Scheduler(session_factory, every_minutes=10_000, daily_hour=3, ingest=fake_ingest())
+    scheduler = Scheduler(session_factory, every_minutes=10_000, daily_hour=3, streak_reminder_hour=23, ingest=fake_ingest())
     early = datetime(2026, 9, 20, 1, 0, tzinfo=UTC)
     with session_factory() as db:
         assert is_due(db, "daily", early, daily_hour=3) is False
     assert scheduler.tick(datetime(2026, 9, 20, 3, 5, tzinfo=UTC)) == ["daily"]
     assert scheduler.tick(datetime(2026, 9, 20, 22, 0, tzinfo=UTC)) == []
     assert scheduler.tick(datetime(2026, 9, 21, 3, 5, tzinfo=UTC)) == ["daily"]
+
+
+def test_streak_reminder_waits_for_its_hour_runs_once_a_day_and_reaches_an_at_risk_streak(session_factory, monkeypatch):
+    monkeypatch.setenv("VAPID_PUBLIC_KEY", "test-public-key")
+    monkeypatch.setenv("VAPID_PRIVATE_KEY", "test-private-key")
+    sent: list[str] = []
+    monkeypatch.setattr("app.push.webpush", lambda **kw: sent.append(kw["subscription_info"]["endpoint"]))
+
+    scheduler = Scheduler(session_factory, every_minutes=10_000, daily_hour=23, streak_reminder_hour=14, ingest=fake_ingest())
+    with session_factory() as db:
+        db.add(UserStreak(user_id="u1", current_streak=5, longest_streak=5, last_active_on=date(2026, 9, 19)))
+        db.add(PushSubscription(user_id="u1", endpoint="https://push.test/u1", p256dh="a", auth="b", categories=["streak"]))
+        db.commit()
+
+    assert "streak_reminder" not in scheduler.tick(datetime(2026, 9, 20, 10, 0, tzinfo=UTC))  # before the reminder hour
+    assert scheduler.tick(datetime(2026, 9, 20, 14, 5, tzinfo=UTC)) == ["streak_reminder"]
+    assert sent == ["https://push.test/u1"]
+    assert scheduler.tick(datetime(2026, 9, 20, 20, 0, tzinfo=UTC)) == []  # not again the same day
+    with session_factory() as db:
+        run = db.query(NotificationRun).filter_by(kind="streak_reminder").one()
+        assert run.sent == 1 and run.finished_at is not None
+
+
+def test_two_processes_never_send_streak_reminders_at_once(session_factory):
+    with session_factory() as db:
+        db.add(NotificationRun(kind="streak_reminder", started_at=datetime.now(UTC)))
+        db.commit()
+    assert run_streak_reminders(session_factory) is None
 
 
 def test_two_processes_never_ingest_at_once_but_a_crashed_run_does_not_block_forever(session_factory):
