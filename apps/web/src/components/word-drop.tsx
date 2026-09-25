@@ -4,16 +4,22 @@ import { useCallback, useEffect, useId, useReducer, useRef, useState } from "rea
 import { api } from "@/lib/api";
 import {
   MAX_GUESSES,
+  MAX_HINTS,
+  hintText,
   newWordState,
-  pickWord,
+  pickTarget,
   readWordBest,
   saveWordIfBest,
   scoreGuess,
   submitGuess,
+  takeHint,
+  wordShareCard,
   type LetterState,
   type WordState,
+  type WordTarget,
 } from "@/lib/word-drop";
 import { CloseIcon } from "./icons";
+import { ShareBar } from "./games/share-bar";
 import { PartnerBadge } from "./partner-badge";
 import { Button, cx } from "./ui";
 
@@ -31,13 +37,14 @@ interface State {
 
 type Action =
   | { type: "start" }
-  | { type: "loaded"; target: string }
+  | { type: "loaded"; target: WordTarget }
   | { type: "failed"; message: string }
   | { type: "type"; value: string }
   | { type: "submit" }
+  | { type: "hint" }
   | { type: "clearMessage" };
 
-const initial = (): State => ({ phase: "intro", word: newWordState(""), input: "", message: null, error: null });
+const initial = (): State => ({ phase: "intro", word: newWordState({ word: "", kind: "skill" }), input: "", message: null, error: null });
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
@@ -57,6 +64,8 @@ function reducer(state: State, action: Action): State {
       const word = submitGuess(state.word, state.input);
       return { ...state, word, input: "", message: null, phase: word.status === "playing" ? "playing" : "over" };
     }
+    case "hint":
+      return state.phase === "playing" ? { ...state, word: takeHint(state.word) } : state;
     case "clearMessage":
       return { ...state, message: null };
   }
@@ -119,7 +128,7 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
       .capabilities("", null, undefined, controller.signal, 80, true)
       .then((capabilities) => {
         fetching.current = false;
-        const target = pickWord(capabilities);
+        const target = pickTarget(capabilities);
         if (target) dispatch({ type: "loaded", target });
         else dispatch({ type: "failed", message: "We couldn't find a short enough skill or tool name. Try again in a moment." });
       })
@@ -179,7 +188,7 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
               Guess a real skill or tool.
             </h1>
             <p className="mt-4 text-[17px] leading-relaxed text-muted">
-              Six tries. After each guess, a letter turns green in the right spot, amber if it&apos;s in the word but the wrong spot, and grey if it isn&apos;t there. There&apos;s no dictionary behind this: a guess just has to be the right length.
+              Six tries. After each guess, a letter turns green in the right spot, amber if it&apos;s in the word but the wrong spot, and grey if it isn&apos;t there. There&apos;s no dictionary behind this: a guess just has to be the right length. Stuck? Two hints are there if you want them.
             </p>
             {bestAtStart && (
               <p className="mt-4 text-sm text-muted">
@@ -228,6 +237,17 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
                 return <Row key={i} length={word.target.length} letters="" />;
               })}
             </div>
+
+            {word.hintsUsed > 0 && (
+              <ul aria-live="polite" className="mt-4 flex w-full max-w-xs flex-col gap-1.5">
+                {hintText(word).map((hint, i) => (
+                  <li key={i} className="raised rounded-lg px-3 py-1.5 text-center text-sm text-muted">
+                    {hint}
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <form
               className="mt-6 flex w-full max-w-xs items-center gap-2"
               onSubmit={(e) => {
@@ -253,6 +273,14 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
                 Guess
               </Button>
             </form>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "hint" })}
+              disabled={word.hintsUsed >= MAX_HINTS}
+              className="mt-3 text-sm font-semibold text-accent disabled:text-muted disabled:no-underline"
+            >
+              {word.hintsUsed >= MAX_HINTS ? "No hints left" : `Need a hint? (${MAX_HINTS - word.hintsUsed} left)`}
+            </button>
             <p role="status" aria-live="polite" className="mt-3 min-h-5 text-sm text-accent">
               {state.message}
             </p>
@@ -272,6 +300,15 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
                 </p>
               )}
             </div>
+            {word.status === "won" && (
+              <ShareBar
+                card={wordShareCard(word)}
+                fileName="vantage-word-drop.png"
+                shareTitle="My Vantage Word Drop score"
+                shareText={`I solved Word Drop in ${word.guesses.length} ${word.guesses.length === 1 ? "guess" : "guesses"} on Vantage. Think you can beat that?`}
+                url={typeof window === "undefined" ? "" : `${window.location.origin}/games`}
+              />
+            )}
             <div className="flex gap-2">
               <Button variant="primary" onClick={start}>
                 Play again

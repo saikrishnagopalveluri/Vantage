@@ -104,14 +104,6 @@ export const FlameIcon = (p: P) => (
     <path d="M12 3c1.2 2.6-2.4 4.2-2.4 7.2a2.4 2.4 0 0 0 4.8 0c0-.8-.4-1.6-.4-1.6 1 .6 1.5 2 1.5 3.4a4.5 4.5 0 0 1-9 0C6.5 8 10 6 12 3z" />
   </svg>
 );
-export const DotsIcon = (p: P) => (
-  <svg {...base(p)}>
-    <circle cx="5" cy="18" r="2.2" fill="currentColor" stroke="none" />
-    <circle cx="12" cy="7" r="2.2" fill="currentColor" stroke="none" />
-    <circle cx="19" cy="18" r="2.2" fill="currentColor" stroke="none" />
-    <path d="M6.8 16.5L10.3 9M13.7 9L17.2 16.5" />
-  </svg>
-);
 export const WordIcon = (p: P) => (
   <svg {...base(p)}>
     <rect x="3" y="9" width="5" height="6" rx="1" />

@@ -3,18 +3,20 @@
 import { useCallback, useEffect, useId, useReducer, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import {
-  MIN_PAIRS,
-  isSolved,
+  BOARD_SIZE,
+  MIN_QUEUE,
+  ROUND_SECONDS,
+  accuracy,
+  matchShareCard,
   newMatchState,
-  pickPairs,
   readMatchBest,
   saveMatchIfBest,
   selectLeft,
   tryMatch,
-  type MatchPair,
   type MatchState,
 } from "@/lib/match-field";
-import { CheckIcon, CloseIcon } from "./icons";
+import { CloseIcon } from "./icons";
+import { ShareBar } from "./games/share-bar";
 import { PartnerBadge } from "./partner-badge";
 import { Button, cx } from "./ui";
 
@@ -25,33 +27,33 @@ type Phase = "intro" | "loading" | "playing" | "over" | "error";
 interface State {
   phase: Phase;
   match: MatchState;
-  startedAt: number;
-  elapsed: number;
+  deadline: number; // performance.now() value when the round ends
+  left: number; // seconds left, for display
   lastWrong: { left: string; right: string } | null;
   error: string | null;
 }
 
 type Action =
   | { type: "start" }
-  | { type: "loaded"; pairs: MatchPair[]; at: number }
+  | { type: "loaded"; match: MatchState; at: number }
   | { type: "failed"; message: string }
   | { type: "selectLeft"; id: string }
-  | { type: "tryMatch"; id: string; at: number }
+  | { type: "tryMatch"; id: string }
   | { type: "clearWrong" }
   | { type: "tick"; at: number };
 
-const initial = (): State => ({ phase: "intro", match: newMatchState([]), startedAt: 0, elapsed: 0, lastWrong: null, error: null });
+const initial = (): State => ({ phase: "intro", match: newMatchState([]), deadline: 0, left: ROUND_SECONDS, lastWrong: null, error: null });
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "start":
       return { ...initial(), phase: "loading" };
-    case "loaded": {
-      if (action.pairs.length < MIN_PAIRS) {
+    case "loaded":
+      if (state.phase !== "loading") return state;
+      if (action.match.board.length < Math.min(MIN_QUEUE, BOARD_SIZE)) {
         return { ...state, phase: "error", error: "We couldn't find enough companies with different industries. Try again in a moment." };
       }
-      return { ...state, phase: "playing", match: newMatchState(action.pairs), startedAt: action.at, elapsed: 0 };
-    }
+      return { ...state, phase: "playing", match: action.match, deadline: action.at + ROUND_SECONDS * 1000, left: ROUND_SECONDS };
     case "failed":
       return { ...state, phase: "error", error: action.message };
     case "selectLeft":
@@ -60,14 +62,15 @@ function reducer(state: State, action: Action): State {
       if (state.phase !== "playing") return state;
       const wasSelected = state.match.selectedLeft;
       const { state: match, correct } = tryMatch(state.match, action.id);
-      if (!correct) return { ...state, match, lastWrong: wasSelected ? { left: wasSelected, right: action.id } : null };
-      const solved = isSolved(match);
-      return solved ? { ...state, match, phase: "over", elapsed: (action.at - state.startedAt) / 1000 } : { ...state, match };
+      return { ...state, match, lastWrong: !correct && wasSelected ? { left: wasSelected, right: action.id } : null };
     }
     case "clearWrong":
       return { ...state, lastWrong: null };
-    case "tick":
-      return state.phase === "playing" ? { ...state, elapsed: (action.at - state.startedAt) / 1000 } : state;
+    case "tick": {
+      if (state.phase !== "playing") return state;
+      const left = (state.deadline - action.at) / 1000;
+      return left <= 0 ? { ...state, phase: "over", left: 0 } : { ...state, left };
+    }
   }
 }
 
@@ -75,6 +78,7 @@ function reducer(state: State, action: Action): State {
 
 export function MatchField({ onClose }: { onClose: () => void }) {
   const [state, dispatch] = useReducer(reducer, undefined, initial);
+  const [leaving, setLeaving] = useState(false);
   const [bestAtStart, setBestAtStart] = useState(() => readMatchBest());
   const dialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -91,16 +95,21 @@ export function MatchField({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  // A fresh batch of real companies, once per round.
+  const requestExit = useCallback(() => {
+    if (phase === "playing" && match.correct > 0) setLeaving(true);
+    else onClose();
+  }, [phase, match.correct, onClose]);
+
+  // A large batch of real companies, once per round — enough to cover a fast 60 seconds without asking again.
   useEffect(() => {
     if (phase !== "loading" || fetching.current) return;
     fetching.current = true;
     const controller = new AbortController();
     api
-      .companies("", null, controller.signal, 40, true)
+      .companies("", null, controller.signal, 200, true)
       .then((companies) => {
         fetching.current = false;
-        dispatch({ type: "loaded", pairs: pickPairs(companies), at: performance.now() });
+        dispatch({ type: "loaded", match: newMatchState(companies), at: performance.now() });
       })
       .catch((e: Error) => {
         fetching.current = false;
@@ -109,10 +118,10 @@ export function MatchField({ onClose }: { onClose: () => void }) {
     return () => controller.abort();
   }, [phase]);
 
-  // A stopwatch, not a countdown: it only ever shows how long the round has taken so far.
+  // One clock for the whole round.
   useEffect(() => {
     if (phase !== "playing") return;
-    const id = window.setInterval(() => dispatch({ type: "tick", at: performance.now() }), 200);
+    const id = window.setInterval(() => dispatch({ type: "tick", at: performance.now() }), 100);
     return () => window.clearInterval(id);
   }, [phase]);
 
@@ -123,10 +132,10 @@ export function MatchField({ onClose }: { onClose: () => void }) {
     return () => window.clearTimeout(id);
   }, [state.lastWrong]);
 
-  // The end of the round: remember the best time.
+  // The end of the round: remember the best score.
   useEffect(() => {
     if (phase !== "over") return;
-    saveMatchIfBest(state.elapsed, match.mistakes);
+    saveMatchIfBest(match);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
@@ -139,38 +148,67 @@ export function MatchField({ onClose }: { onClose: () => void }) {
     dispatch({ type: "start" });
   }, []);
 
-  const newBest = phase === "over" && (!bestAtStart || state.elapsed < bestAtStart.seconds);
+  const newBest = phase === "over" && match.correct > (bestAtStart?.correct ?? 0);
 
   return (
-    <dialog ref={dialog} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); onClose(); }} className="m-0 h-dvh max-h-none w-dvw max-w-none overflow-y-auto bg-paper p-0 text-ink">
+    <dialog
+      ref={dialog}
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        e.preventDefault();
+        requestExit();
+      }}
+      className="m-0 h-dvh max-h-none w-dvw max-w-none overflow-y-auto bg-paper p-0 text-ink"
+    >
       <div className="pt-safe px-safe mx-auto flex min-h-dvh w-full max-w-xl flex-col pb-6">
         <header className="flex h-14 items-center gap-2">
           <span className="font-display text-xl">Vantage</span>
           <div className="ml-auto flex items-center">
             {phase === "playing" && (
               <p className="mr-2 text-right leading-tight" aria-live="off">
-                <span className="block font-display text-2xl tabular-nums">{Math.floor(state.elapsed)}s</span>
-                <span className="block font-mono text-xs text-muted">{match.matched.size} of {match.pairs.length}</span>
+                <span className="block font-display text-2xl tabular-nums">{match.correct}</span>
+                <span className="block font-mono text-xs text-muted">matched</span>
               </p>
             )}
-            <button type="button" onClick={onClose} aria-label="Close Match the Field" className="-mr-2 flex size-11 items-center justify-center rounded-full text-muted hover:text-ink">
+            <button type="button" onClick={requestExit} aria-label="Close Match the Field" className="-mr-2 flex size-11 items-center justify-center rounded-full text-muted hover:text-ink">
               <CloseIcon width={22} height={22} />
             </button>
           </div>
         </header>
 
+        {leaving && (
+          <div role="alertdialog" aria-label="Leave Match the Field?" className="raised mb-4 rounded-2xl p-4">
+            <p className="font-semibold">Leave Match the Field?</p>
+            <p className="mt-1 text-sm text-muted">Your {match.correct} {match.correct === 1 ? "match" : "matches"} so far won&apos;t be saved.</p>
+            <div className="mt-3 flex gap-2">
+              <Button variant="primary" onClick={() => setLeaving(false)}>
+                Keep playing
+              </Button>
+              <Button onClick={onClose}>Leave</Button>
+            </div>
+          </div>
+        )}
+
         {phase === "intro" && (
           <div className="rise my-auto py-6">
             <p className="font-mono text-xs text-accent">Match the Field</p>
             <h1 id={titleId} ref={heading} tabIndex={-1} className="mt-2 font-display text-[40px] leading-[1.05] outline-none">
-              Which industry is each company in?
+              How many can you match in a minute?
             </h1>
             <p className="mt-4 text-[17px] leading-relaxed text-muted">
-              Tap a company, then tap the industry it belongs to. No lives, no rush, just real companies from the taxonomy. A wrong pair costs nothing but a moment.
+              Tap a company, then tap the industry it belongs to. A wrong pair costs nothing but a moment — the clock never stops, so just keep matching until time runs out.
             </p>
+            <ul className="mt-5 grid grid-cols-2 gap-2 text-center text-sm">
+              {[[`${ROUND_SECONDS}s`, "on the clock"], ["No limit", "on matches"]].map(([big, small]) => (
+                <li key={small} className="raised rounded-xl px-2 py-3">
+                  <span className="block font-display text-xl">{big}</span>
+                  <span className="text-muted">{small}</span>
+                </li>
+              ))}
+            </ul>
             {bestAtStart && (
               <p className="mt-4 text-sm text-muted">
-                Your best so far: <span className="font-semibold text-ink">{Math.round(bestAtStart.seconds)}s</span>.
+                Your best so far: <span className="font-semibold text-ink">{bestAtStart.correct}</span> matched.
               </p>
             )}
             <Button variant="primary" onClick={start} className="mt-6 w-full">
@@ -182,7 +220,7 @@ export function MatchField({ onClose }: { onClose: () => void }) {
 
         {phase === "loading" && (
           <div role="status" className="my-auto py-10 text-center text-muted">
-            <p className="font-display text-2xl text-ink">Picking five companies</p>
+            <p className="font-display text-2xl text-ink">Lining up companies</p>
             <p className="mt-2 text-sm">From the same taxonomy the feed uses.</p>
           </div>
         )}
@@ -204,32 +242,39 @@ export function MatchField({ onClose }: { onClose: () => void }) {
 
         {phase === "playing" && (
           <div className="flex flex-1 flex-col">
-            <h2 id={titleId} ref={heading} tabIndex={-1} className="mt-5 font-display text-[26px] leading-[1.15] outline-none">
-              Tap a company, then its industry.
-            </h2>
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div aria-hidden className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-sunken">
+              <div
+                className={cx("h-full rounded-full transition-[width] duration-100 ease-linear", state.left <= 10 ? "bg-accent" : "bg-ink/70")}
+                style={{ width: `${Math.max(0, Math.min(100, (state.left / ROUND_SECONDS) * 100))}%` }}
+              />
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <h2 id={titleId} ref={heading} tabIndex={-1} className="font-display text-[20px] leading-[1.15] outline-none">
+                Tap a company, then its industry.
+              </h2>
+              <span role="timer" className="ml-auto font-mono text-muted tabular-nums" aria-label="Seconds left in the round">
+                {Math.ceil(state.left)}s
+              </span>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
               <ul aria-label="Companies" className="flex flex-col gap-2">
                 {match.leftOrder.map((id) => {
-                  const pair = match.pairs.find((p) => p.id === id)!;
-                  const done = match.matched.has(id);
+                  const pair = match.board.find((p) => p.id === id)!;
                   const selected = match.selectedLeft === id;
                   const wrong = state.lastWrong?.left === id;
                   return (
                     <li key={id}>
                       <button
                         type="button"
-                        disabled={done}
                         aria-pressed={selected}
                         onClick={() => dispatch({ type: "selectLeft", id })}
                         className={cx(
-                          "flex min-h-14 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[15px] leading-snug transition-colors disabled:cursor-default",
-                          done && "border-good bg-good-soft text-ink",
-                          !done && selected && "border-ink bg-sunken",
-                          !done && wrong && "border-accent bg-accent-soft",
-                          !done && !selected && !wrong && "border-line bg-surface hover:border-muted",
+                          "flex min-h-14 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[15px] leading-snug transition-colors",
+                          selected && "border-ink bg-sunken",
+                          wrong && "border-accent bg-accent-soft",
+                          !selected && !wrong && "border-line bg-surface hover:border-muted",
                         )}
                       >
-                        {done && <CheckIcon width={16} height={16} className="shrink-0 text-good" />}
                         <span className="flex-1">{pair.left}</span>
                       </button>
                     </li>
@@ -238,23 +283,19 @@ export function MatchField({ onClose }: { onClose: () => void }) {
               </ul>
               <ul aria-label="Industries" className="flex flex-col gap-2">
                 {match.rightOrder.map((id) => {
-                  const pair = match.pairs.find((p) => p.id === id)!;
-                  const done = match.matched.has(id);
+                  const pair = match.board.find((p) => p.id === id)!;
                   const wrong = state.lastWrong?.right === id;
                   return (
                     <li key={id}>
                       <button
                         type="button"
-                        disabled={done}
-                        onClick={() => dispatch({ type: "tryMatch", id, at: performance.now() })}
+                        onClick={() => dispatch({ type: "tryMatch", id })}
                         className={cx(
-                          "flex min-h-14 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[15px] leading-snug transition-colors disabled:cursor-default",
-                          done && "border-good bg-good-soft text-ink",
-                          !done && wrong && "border-accent bg-accent-soft",
-                          !done && !wrong && "border-line bg-surface hover:border-muted",
+                          "flex min-h-14 w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[15px] leading-snug transition-colors",
+                          wrong && "border-accent bg-accent-soft",
+                          !wrong && "border-line bg-surface hover:border-muted",
                         )}
                       >
-                        {done && <CheckIcon width={16} height={16} className="shrink-0 text-good" />}
                         <span className="flex-1">{pair.right}</span>
                       </button>
                     </li>
@@ -271,15 +312,22 @@ export function MatchField({ onClose }: { onClose: () => void }) {
         {phase === "over" && (
           <div className="rise flex flex-col gap-5 py-2">
             <div>
-              <p className="font-mono text-xs text-accent">Solved</p>
+              <p className="font-mono text-xs text-accent">Time&apos;s up</p>
               <h1 id={titleId} ref={heading} tabIndex={-1} className="mt-1 font-display text-[34px] leading-[1.1] outline-none">
-                All five in {Math.round(state.elapsed)}s
+                {match.correct} matched in {ROUND_SECONDS} seconds
               </h1>
               <p className="mt-2 text-muted">
-                {match.mistakes === 0 ? "No wrong guesses." : `${match.mistakes} wrong ${match.mistakes === 1 ? "guess" : "guesses"}.`}
-                {newBest ? <span className="ml-2 rounded bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">New best</span> : bestAtStart ? `, your best is ${Math.round(bestAtStart.seconds)}s` : ""}
+                {accuracy(match)}% accuracy
+                {newBest ? <span className="ml-2 rounded bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">New best</span> : bestAtStart ? `, your best is ${bestAtStart.correct}` : ""}
               </p>
             </div>
+            <ShareBar
+              card={matchShareCard(match)}
+              fileName="vantage-match-the-field.png"
+              shareTitle="My Vantage Match the Field score"
+              shareText={`I matched ${match.correct} ${match.correct === 1 ? "company" : "companies"} to their industry in ${ROUND_SECONDS} seconds on Vantage (${accuracy(match)}% accuracy). Think you can beat that?`}
+              url={typeof window === "undefined" ? "" : `${window.location.origin}/games`}
+            />
             <div className="flex gap-2">
               <Button variant="primary" onClick={start}>
                 Play again

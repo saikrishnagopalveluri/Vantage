@@ -10,7 +10,6 @@ const QuizGame = dynamic(() => import("@/components/quiz-game").then((m) => m.Qu
 const SpeedRound = dynamic(() => import("@/components/speed-round").then((m) => m.SpeedRound), { ssr: false });
 const MatchField = dynamic(() => import("@/components/match-field").then((m) => m.MatchField), { ssr: false });
 const WordDrop = dynamic(() => import("@/components/word-drop").then((m) => m.WordDrop), { ssr: false });
-const ConnectDots = dynamic(() => import("@/components/connect-dots").then((m) => m.ConnectDots), { ssr: false });
 
 export default function GamesPage() {
   const { profile } = useProfile();
@@ -24,7 +23,6 @@ export default function GamesPage() {
       {active === "speed-round" && <SpeedRound userId={profile.user_id} onClose={() => setActive(null)} />}
       {active === "match-field" && <MatchField onClose={() => setActive(null)} />}
       {active === "word-drop" && <WordDrop onClose={() => setActive(null)} />}
-      {active === "connect-dots" && <ConnectDots onClose={() => setActive(null)} />}
     </div>
   );
 }

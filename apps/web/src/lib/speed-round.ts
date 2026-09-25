@@ -2,6 +2,7 @@
  *  Kept free of React so it can be tested on its own, the same way quiz.ts is. */
 
 import type { QuizQuestion } from "./quiz";
+import type { ShareCard } from "./share";
 
 export const ROUND_SECONDS = 60;
 export const LEVEL = 3; // a fixed, moderate difficulty for the whole round: this game is a race, not a climb
@@ -61,4 +62,21 @@ export function saveSpeedIfBest(game: SpeedGame): boolean {
     window.localStorage.setItem(BEST_KEY, JSON.stringify({ correct: game.correct, answered: game.answers.length }));
   } catch {}
   return game.correct > 0;
+}
+
+// ---- share card ------------------------------------------------------------------------------------------------------
+
+export function speedShareCard(game: SpeedGame): ShareCard {
+  return {
+    game: "SPEED ROUND",
+    headlineLabel: "right",
+    headline: String(game.correct),
+    accentLabel: "accuracy",
+    accent: `${accuracy(game)}%`,
+    stats: [
+      { value: String(game.answers.length), label: "answered" },
+      { value: `${ROUND_SECONDS}s`, label: "on the clock" },
+    ],
+    footer: "Think you can beat it?",
+  };
 }

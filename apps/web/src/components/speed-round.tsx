@@ -14,9 +14,11 @@ import {
   newSpeedGame,
   readSpeedBest,
   saveSpeedIfBest,
+  speedShareCard,
   type SpeedGame,
 } from "@/lib/speed-round";
 import { CheckIcon, CloseIcon } from "./icons";
+import { ShareBar } from "./games/share-bar";
 import { PartnerBadge } from "./partner-badge";
 import { Button, Chip, cx } from "./ui";
 
@@ -339,6 +341,13 @@ export function SpeedRound({ userId, onClose }: { userId: string; onClose: () =>
                 {newBest ? <span className="ml-2 rounded bg-accent-soft px-2 py-0.5 text-sm font-semibold text-accent">New best</span> : bestAtStart ? `, your best is ${bestAtStart.correct}` : ""}
               </p>
             </div>
+            <ShareBar
+              card={speedShareCard(game)}
+              fileName="vantage-speed-round.png"
+              shareTitle="My Vantage Speed Round score"
+              shareText={`I got ${game.correct} right in ${ROUND_SECONDS} seconds on the Vantage Speed Round (${accuracy(game)}% accuracy). Think you can beat that?`}
+              url={typeof window === "undefined" ? "" : `${window.location.origin}/games`}
+            />
             <div className="flex gap-2">
               <Button variant="primary" onClick={start}>
                 Play again
