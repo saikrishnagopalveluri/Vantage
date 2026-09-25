@@ -26,6 +26,7 @@ import type {
   SavedItem,
   SearchResults,
   SkillGaps,
+  Streak,
   TargetsBody,
 } from "./types";
 
@@ -149,6 +150,8 @@ export const api = {
       body: { article_id: articleId, action },
     }),
   saved: (userId: string, signal?: AbortSignal) => request<SavedItem[]>(`/feed/${userId}/saved`, { signal }),
+  streak: (userId: string, signal?: AbortSignal) => request<Streak>(`/streaks/${userId}`, { signal }),
+  touchStreak: (userId: string) => request<Streak>(`/streaks/${userId}/touch`, { method: "POST" }),
   quiz: (userId: string, level: number, exclude: string[], count: number, signal?: AbortSignal) =>
     request<{ level: number; questions: QuizQuestion[] }>(`/quiz/${userId}${qs({ level, count, exclude: exclude.join(",") })}`, { signal }),
 

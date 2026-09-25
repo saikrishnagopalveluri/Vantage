@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { api } from "@/lib/api";
 import { useOnline } from "@/lib/hooks";
-import type { Profile } from "@/lib/types";
-import { BookmarkIcon, CareerIcon, CompassIcon, FeedIcon, GamesIcon, Logo, SearchIcon, UserIcon } from "./icons";
+import type { Profile, Streak } from "@/lib/types";
+import { BookmarkIcon, CareerIcon, CompassIcon, FeedIcon, FlameIcon, GamesIcon, Logo, SearchIcon, UserIcon } from "./icons";
 import { GamePicker } from "./games/game-picker";
 import { OPEN_QUIZ_EVENT, useMultiTap } from "@/lib/triple-tap";
 import { PartnerBadge } from "./partner-badge";
@@ -36,6 +37,24 @@ function statusLine(profile: Profile): string {
   return profile.target_roles[0] ? `Aiming for ${profile.target_roles[0].title}` : "Still exploring";
 }
 
+/** A day counted today shows warm; a streak that hasn't been touched yet today still shows the count,
+ *  just in a quieter color, so it doesn't read as already lost. */
+function StreakBadge({ streak, className }: { streak: Streak; className?: string }) {
+  if (streak.current_streak === 0) return null;
+  const label = `${streak.current_streak} day${streak.current_streak === 1 ? "" : "s"} in a row${streak.longest_streak > streak.current_streak ? `, best ${streak.longest_streak}` : ""}`;
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cx("inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-xs font-semibold", streak.active_today ? "text-accent" : "text-muted", className)}
+    >
+      <FlameIcon width={14} height={14} />
+      <span aria-hidden data-testid="streak-count">{streak.current_streak}</span>
+    </span>
+  );
+}
+
 export function AppShell({ profile, children }: { profile: Profile | null; children: ReactNode }) {
   const pathname = usePathname();
   const online = useOnline();
@@ -46,6 +65,7 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
   const [wordDrop, setWordDrop] = useState(false);
   const [connectDots, setConnectDots] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [streak, setStreak] = useState<Streak | null>(null);
   const openQuiz = useCallback(() => setQuiz(true), []);
   const openPicker = useCallback(() => setPicker(true), []);
   const onLogo = useMultiTap(openPicker); // tap the logo three times, opens the games picker
@@ -74,6 +94,22 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
       window.removeEventListener(OPEN_QUIZ_EVENT, openQuiz);
     };
   }, [openQuiz]);
+
+  // Opening the app at all counts as today's visit. A repeat touch the same day is a no-op on the
+  // server, so this doesn't need to be more careful than "once profile is known".
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    api
+      .touchStreak(profile.user_id)
+      .then((s) => {
+        if (!cancelled) setStreak(s);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [profile]);
 
   return (
     <div className="min-h-dvh md:pl-64">
@@ -108,7 +144,10 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
           ))}
         </nav>
         <div className="raised mt-auto rounded-xl p-3 text-sm">
-          <p className="text-muted">You&apos;re reading as</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-muted">You&apos;re reading as</p>
+            {streak && <StreakBadge streak={streak} />}
+          </div>
           {profile ? (
             <p className="mt-0.5 font-semibold leading-snug">{statusLine(profile)}</p>
           ) : (
@@ -127,10 +166,11 @@ export function AppShell({ profile, children }: { profile: Profile | null; child
             <Logo size={26} />
             <span className="font-display text-xl">Vantage</span>
           </Link>
+          {streak && <StreakBadge streak={streak} className="ml-auto" />}
           <button
             onClick={() => setSearching(true)}
             aria-label="Search"
-            className="-mr-2 ml-auto flex size-11 items-center justify-center rounded-full text-muted hover:text-ink"
+            className={cx("-mr-2 flex size-11 items-center justify-center rounded-full text-muted hover:text-ink", !streak && "ml-auto")}
           >
             <SearchIcon />
           </button>

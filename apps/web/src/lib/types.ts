@@ -220,3 +220,9 @@ export interface Pulse {
   updated_at: string | null;
   headlines: Headline[];
 }
+
+export interface Streak {
+  current_streak: number;
+  longest_streak: number;
+  active_today: boolean;
+}

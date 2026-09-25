@@ -1,8 +1,8 @@
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Date, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -240,6 +240,18 @@ class ProfileEvent(Base):
     event_type: Mapped[str] = mapped_column(String)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class UserStreak(Base):
+    """How many days in a row a user has opened Vantage. Touched at most once per calendar day (UTC);
+    a same-day touch is a no-op, so any page that wants to count today's visit can call it freely."""
+
+    __tablename__ = "user_streaks"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    current_streak: Mapped[int] = mapped_column(default=0)
+    longest_streak: Mapped[int] = mapped_column(default=0)
+    last_active_on: Mapped[date | None] = mapped_column(Date)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
 
 # ---- Job descriptions -----------------------------------------------------

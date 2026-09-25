@@ -99,6 +99,11 @@ export const PlusIcon = (p: P) => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 );
+export const FlameIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 3c1.2 2.6-2.4 4.2-2.4 7.2a2.4 2.4 0 0 0 4.8 0c0-.8-.4-1.6-.4-1.6 1 .6 1.5 2 1.5 3.4a4.5 4.5 0 0 1-9 0C6.5 8 10 6 12 3z" />
+  </svg>
+);
 export const DotsIcon = (p: P) => (
   <svg {...base(p)}>
     <circle cx="5" cy="18" r="2.2" fill="currentColor" stroke="none" />

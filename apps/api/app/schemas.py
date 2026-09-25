@@ -258,6 +258,12 @@ class InteractionOut(BaseModel):
     dismissed: bool
 
 
+class StreakOut(BaseModel):
+    current_streak: int
+    longest_streak: int
+    active_today: bool
+
+
 class SavedItem(BaseModel):
     id: str
     title: str
