@@ -14,6 +14,7 @@ ADDED_COLUMNS: list[tuple[str, str, str]] = [
     ("companies", "mba", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("capabilities", "mba", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("users", "name", "VARCHAR(120)"),
+    ("companies", "website", "VARCHAR"),
 ]
 
 

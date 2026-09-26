@@ -171,6 +171,15 @@ export default function FeedPage() {
     };
   }, [state.at, reload]);
 
+  // A rough "time spent" tally for the achievement badges. Only counts while the tab is actually
+  // visible, and only in whole-minute chunks, so backgrounding the tab doesn't inflate it.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible") void api.logTime(userId, 60).catch(() => {});
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [userId]);
+
   const patch = (id: string, changes: Partial<FeedItem>) =>
     setState((s) => ({ ...s, items: s.items.map((i) => (i.id === id ? { ...i, ...changes } : i)) }));
 

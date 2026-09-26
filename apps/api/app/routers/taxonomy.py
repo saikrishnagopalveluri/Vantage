@@ -4,9 +4,11 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.deps import get_db
+from app.deps import get_caller_id, get_db
+from app.entity_search import fetch_website_meta, google_search
 from app.feed import SearchHit, article_hits, search_articles
 from app.hiring import companies_hiring_domain, companies_hiring_role, roles_hired_by
 from app.models import (
@@ -23,18 +25,24 @@ from app.models import (
 )
 from app.search_terms import variants
 from app.schemas import (
+    AddCompanyIn,
+    AddRoleIn,
     ArticleBrief,
     CapabilityRef,
     CompanyDetail,
     CompanyOut,
+    CompanySuggestOut,
     DomainOut,
     DomainRoles,
     NamedRef,
     RelatedRole,
     RoleDetail,
     RoleRef,
+    RoleSuggestOut,
     SearchOut,
     SourceRef,
+    SuggestIn,
+    WebResultOut,
 )
 from app.services import capability_ref, domain_ref, role_ref
 
@@ -129,6 +137,39 @@ def roles(
         stmt = stmt.where(Role.mba.is_(True))
     stmt = stmt.order_by(case((Role.parent_id.is_(None), 0), else_=1), *_relevance(Role.title, q, Role.mba)).limit(limit).offset(offset)
     return [role_ref(r) for r in db.scalars(stmt)]
+
+
+@router.post("/roles/suggest", response_model=RoleSuggestOut)
+def suggest_roles(body: SuggestIn, db: Session = Depends(get_db), caller_id: str = Depends(get_caller_id)):
+    """The closest roles already on file for a typed title, plus web context to help fill in a new
+    one if none of them fit. A search-provider hiccup never blocks this — it just means an empty
+    web_results, and adding the role by hand still works."""
+    stmt = select(Role).options(selectinload(Role.domain), selectinload(Role.parent)).where(_match(Role.title, body.query))
+    stmt = stmt.order_by(case((Role.parent_id.is_(None), 0), else_=1), *_relevance(Role.title, body.query, Role.mba)).limit(3)
+    matches = [role_ref(r) for r in db.scalars(stmt)]
+    web_results = [WebResultOut(title=r.title, snippet=r.snippet, url=r.url) for r in google_search(f"{body.query} job role responsibilities")]
+    return RoleSuggestOut(matches=matches, web_results=web_results)
+
+
+@router.post("/roles", response_model=RoleRef, status_code=201)
+def add_role(body: AddRoleIn, db: Session = Depends(get_db), caller_id: str = Depends(get_caller_id)):
+    """Adds a role the catalog doesn't have yet, immediately taggable like a curated one. An exact
+    title already on file is returned as-is rather than duplicated — this fills real gaps, it
+    doesn't rename existing entries."""
+    title = body.title.strip()
+    existing = db.scalar(select(Role).options(selectinload(Role.domain), selectinload(Role.parent)).where(Role.title == title))
+    if existing is not None:
+        return role_ref(existing)
+    domain = db.get(Domain, body.domain_id) if body.domain_id else None
+    role = Role(title=title, domain_id=domain.id if domain else None, taggable=True, source="user_submitted", description=body.description)
+    db.add(role)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()  # lost a race with a concurrent add of the same title
+        return role_ref(db.scalar(select(Role).options(selectinload(Role.domain), selectinload(Role.parent)).where(Role.title == title)))
+    db.refresh(role)
+    return role_ref(role)
 
 
 @router.get("/roles/{role_id}", response_model=RoleDetail)
@@ -253,6 +294,43 @@ def companies(
     return [_company_out(c) for c in db.scalars(stmt)]
 
 
+@router.post("/companies/suggest", response_model=CompanySuggestOut)
+def suggest_companies(body: SuggestIn, db: Session = Depends(get_db), caller_id: str = Depends(get_caller_id)):
+    """The closest companies already on file for a typed name, web context, and — when a website was
+    given — that page's own title and description, to help fill in a new company if none of the
+    matches fit. Never fails outright: a search or fetch hiccup just leaves that part empty."""
+    stmt = select(Company).options(selectinload(Company.industry)).where(_match(Company.name, body.query))
+    stmt = stmt.order_by(case((Company.source == "curated", 0), else_=1), *_relevance(Company.name, body.query, Company.mba)).limit(3)
+    matches = [_company_out(c) for c in db.scalars(stmt)]
+    web_results = [WebResultOut(title=r.title, snippet=r.snippet, url=r.url) for r in google_search(f"{body.query} company")]
+    site_meta = None
+    if body.website:
+        fetched = fetch_website_meta(body.website)
+        if fetched:
+            site_meta = WebResultOut(title=fetched.title, snippet=fetched.snippet, url=fetched.url)
+    return CompanySuggestOut(matches=matches, web_results=web_results, site_meta=site_meta)
+
+
+@router.post("/companies", response_model=CompanyOut, status_code=201)
+def add_company(body: AddCompanyIn, db: Session = Depends(get_db), caller_id: str = Depends(get_caller_id)):
+    """Adds a company the catalog doesn't have yet, immediately taggable like a curated one. An
+    exact name already on file is returned as-is rather than duplicated."""
+    name = body.name.strip()
+    existing = db.scalar(select(Company).options(selectinload(Company.industry)).where(Company.name == name))
+    if existing is not None:
+        return _company_out(existing)
+    website = body.website.strip() if body.website else None
+    company = Company(name=name, website=website or None, taggable=True, source="user_submitted")
+    db.add(company)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()  # lost a race with a concurrent add of the same name
+        return _company_out(db.scalar(select(Company).options(selectinload(Company.industry)).where(Company.name == name)))
+    db.refresh(company)
+    return _company_out(company)
+
+
 @router.get("/companies/{company_id}", response_model=CompanyDetail)
 def company_detail(company_id: str, db: Session = Depends(get_db)):
     company = db.get(Company, company_id)
@@ -284,6 +362,7 @@ def company_detail(company_id: str, db: Session = Depends(get_db)):
         id=company.id,
         name=company.name,
         industry=NamedRef(id=company.industry.id, name=company.industry.name) if company.industry else None,
+        website=company.website,
         roles_by_domain=roles_by_domain,
         articles=[_brief(h) for h in article_hits(db, articles)],
     )

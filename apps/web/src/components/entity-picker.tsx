@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAsync, useDebounced } from "@/lib/hooks";
-import type { CapabilityRef, CompanyOut, RoleRef } from "@/lib/types";
+import { ensureUserId } from "@/lib/session";
+import type { CapabilityRef, CompanyOut, CompanySuggestResult, RoleRef, RoleSuggestResult } from "@/lib/types";
 import { CloseIcon } from "./icons";
-import { Skeleton } from "./ui";
+import { Button, Skeleton } from "./ui";
 
 export interface PickItem {
   id: string;
@@ -65,6 +66,155 @@ function interleave(lists: PickItem[][]): PickItem[] {
   return out;
 }
 
+const MIN_ADD_LEN = 2;
+
+function AddEntityPanel({
+  kind,
+  initialQuery,
+  domainId,
+  onAdded,
+  onCancel,
+}: {
+  kind: "roles" | "companies";
+  initialQuery: string;
+  domainId: string | null;
+  onAdded: (item: PickItem) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(initialQuery);
+  const [website, setWebsite] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const debouncedTitle = useDebounced(title.trim());
+  const debouncedWebsite = useDebounced(website.trim());
+
+  const { data, loading } = useAsync<RoleSuggestResult | CompanySuggestResult | null>(
+    (signal) => {
+      if (debouncedTitle.length < 1) return Promise.resolve(null);
+      return kind === "roles"
+        ? api.suggestRole(debouncedTitle, signal)
+        : api.suggestCompany(debouncedTitle, debouncedWebsite || null, signal);
+    },
+    `suggest:${kind}:${debouncedTitle}:${debouncedWebsite}`,
+  );
+
+  const matches = (data?.matches ?? []) as (RoleRef | CompanyOut)[];
+  const webResults = data?.web_results ?? [];
+  const siteMeta = kind === "companies" ? (data as CompanySuggestResult | null)?.site_meta : null;
+
+  const pickExisting = (item: RoleRef | CompanyOut) => {
+    onAdded(kind === "roles" ? fromRole(item as RoleRef) : fromCompany(item as CompanyOut));
+  };
+
+  const submit = async () => {
+    const trimmed = title.trim();
+    if (trimmed.length < MIN_ADD_LEN) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const created =
+        kind === "roles"
+          ? fromRole(await api.addRole({ title: trimmed, domain_id: domainId }))
+          : fromCompany(await api.addCompany({ name: trimmed, website: website.trim() || null }));
+      onAdded(created);
+    } catch (error) {
+      setSubmitError(error instanceof ApiError ? error.message : "Couldn't add that. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="raised mt-2 space-y-3 rounded-xl p-3.5">
+      <div>
+        <label className="mb-1.5 block text-sm font-semibold" htmlFor={`add-${kind}-title`}>
+          {kind === "roles" ? "Role title" : "Company name"}
+        </label>
+        <input
+          id={`add-${kind}-title`}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="min-h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-base outline-none placeholder:text-muted focus:border-accent"
+          autoFocus
+        />
+      </div>
+
+      {kind === "companies" && (
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold" htmlFor="add-companies-website">
+            Website <span className="font-normal text-muted">(optional)</span>
+          </label>
+          <input
+            id="add-companies-website"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="acme.com"
+            className="min-h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-base outline-none placeholder:text-muted focus:border-accent"
+          />
+        </div>
+      )}
+
+      {loading && (
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      )}
+
+      {!loading && matches.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-xs text-muted">Did you mean one of these already in Vantage?</p>
+          <ul className="flex flex-wrap gap-1.5">
+            {matches.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => pickExisting(m)}
+                  className="btn-raised inline-flex min-h-9 items-center rounded-md px-3 text-sm font-semibold"
+                >
+                  {"title" in m ? m.title : m.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {!loading && (siteMeta || webResults.length > 0) && (
+        <div className="space-y-1.5 text-sm">
+          {siteMeta && (
+            <p>
+              <span className="font-semibold">{siteMeta.title}</span>
+              {siteMeta.snippet && <span className="text-muted"> — {siteMeta.snippet}</span>}
+            </p>
+          )}
+          {webResults.map((r) => (
+            <a key={r.url} href={r.url} target="_blank" rel="noreferrer" className="block truncate text-accent hover:underline">
+              {r.title}
+            </a>
+          ))}
+        </div>
+      )}
+
+      {submitError && <p className="text-sm font-semibold text-accent">{submitError}</p>}
+
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="primary"
+          onClick={submit}
+          disabled={submitting || title.trim().length < MIN_ADD_LEN}
+        >
+          {submitting ? "Adding…" : "Add it"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function EntityPicker({
   kind,
   label,
@@ -107,6 +257,9 @@ export function EntityPicker({
     onChange(single ? [item] : [...selected, item]);
     setQuery("");
   };
+
+  const [adding, setAdding] = useState(false);
+  const canAdd = (kind === "roles" || kind === "companies") && !loading && q.length >= MIN_ADD_LEN;
 
   return (
     <div>
@@ -155,7 +308,10 @@ export function EntityPicker({
         id={`pick-${kind}-${label}`}
         type="search"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setAdding(false);
+        }}
         placeholder={placeholder ?? "Search"}
         autoComplete="off"
         className="min-h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-base outline-none placeholder:text-muted focus:border-accent"
@@ -197,6 +353,32 @@ export function EntityPicker({
           </button>
         )}
       </div>
+
+      {canAdd && !adding && (
+        <button
+          type="button"
+          onClick={() => {
+            ensureUserId();
+            setAdding(true);
+          }}
+          className="mt-2 text-sm font-semibold text-accent hover:underline"
+        >
+          Can&apos;t find &quot;{q}&quot;? Add it
+        </button>
+      )}
+
+      {adding && (kind === "roles" || kind === "companies") && (
+        <AddEntityPanel
+          kind={kind}
+          initialQuery={q}
+          domainId={domainIds.length === 1 ? domainIds[0] : null}
+          onAdded={(item) => {
+            pick(item);
+            setAdding(false);
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
     </div>
   );
 }

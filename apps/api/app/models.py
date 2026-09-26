@@ -87,6 +87,7 @@ class Company(Base):
     country: Mapped[str | None] = mapped_column(String)
     external_id: Mapped[str | None] = mapped_column(String, index=True)
     mba: Mapped[bool] = mapped_column(default=False, index=True)
+    website: Mapped[str | None] = mapped_column(String)
 
 
 class Capability(Base):
@@ -253,6 +254,16 @@ class UserStreak(Base):
     current_streak: Mapped[int] = mapped_column(default=0)
     longest_streak: Mapped[int] = mapped_column(default=0)
     last_active_on: Mapped[date | None] = mapped_column(Date)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class UserEngagement(Base):
+    """Running total of active time on Vantage, in seconds. Added to by a heartbeat from the feed
+    page while the tab is visible — a rough measure, not a precise one, which is all a badge needs."""
+
+    __tablename__ = "user_engagement"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    active_seconds: Mapped[int] = mapped_column(default=0)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
 

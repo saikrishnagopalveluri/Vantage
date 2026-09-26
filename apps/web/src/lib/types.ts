@@ -125,9 +125,18 @@ export interface CompanyDetail {
   id: string;
   name: string;
   industry: NamedRef | null;
+  website: string | null;
   roles_by_domain: { domain: NamedRef | null; roles: RoleRef[]; total: number }[];
   articles: ArticleBrief[];
 }
+
+export interface WebResult { title: string; snippet: string; url: string }
+
+export interface RoleSuggestResult { matches: RoleRef[]; web_results: WebResult[] }
+export interface CompanySuggestResult { matches: CompanyOut[]; web_results: WebResult[]; site_meta: WebResult | null }
+
+export interface AddRoleBody { title: string; domain_id?: string | null; description?: string | null }
+export interface AddCompanyBody { name: string; website?: string | null }
 
 export interface SearchResults {
   query: string;
@@ -229,6 +238,20 @@ export interface Streak {
   longest_streak: number;
   active_today: boolean;
 }
+
+export type BadgeKind = "streak" | "articles" | "time";
+
+export interface Badge {
+  id: string;
+  kind: BadgeKind;
+  label: string;
+  description: string;
+  threshold: number;
+  current: number;
+  achieved: boolean;
+}
+
+export interface Badges { badges: Badge[] }
 
 export type PushCategoryId = "streak" | "news" | "games" | "role_update" | "company_update";
 export type PushCategories = Record<string, string>; // category id -> display label

@@ -66,6 +66,6 @@ def test_new_columns_are_added_to_a_database_made_by_an_older_version(tmp_path):
         for table in ("roles", "companies", "capabilities"):
             conn.execute(text(f"CREATE TABLE {table} (id TEXT PRIMARY KEY, name TEXT)"))
     first = add_missing_columns(engine)
-    assert sorted(first) == ["capabilities.mba", "companies.mba", "roles.mba"]
+    assert sorted(first) == ["capabilities.mba", "companies.mba", "companies.website", "roles.mba"]
     assert "mba" in {c["name"] for c in inspect(engine).get_columns("roles")}
     assert add_missing_columns(engine) == []  # safe to run every time

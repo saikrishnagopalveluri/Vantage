@@ -10,7 +10,7 @@ from app.db import engine
 from app.deps import get_db
 from app.migrate import add_missing_columns
 from app.models import Base, IngestRun
-from app.routers import auth, feed, jds, onboarding, privacy, profile, public, push, quiz, streaks, taxonomy
+from app.routers import auth, badges, feed, jds, onboarding, privacy, profile, public, push, quiz, streaks, taxonomy
 
 
 @asynccontextmanager
@@ -35,6 +35,7 @@ app.include_router(onboarding.router)
 app.include_router(profile.router)
 app.include_router(feed.router)
 app.include_router(streaks.router)
+app.include_router(badges.router)
 app.include_router(jds.router)
 app.include_router(quiz.router)
 app.include_router(push.router)

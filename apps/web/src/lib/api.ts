@@ -2,8 +2,12 @@ import { getUserId } from "./session";
 import type { QuizQuestion } from "./quiz";
 import { MAX_FIELDS } from "./types";
 import type {
+  AddCompanyBody,
+  AddRoleBody,
   AuthResult,
+  Badges,
   ConsentBody,
+  CompanySuggestResult,
   LegalInfo,
   CapabilityKind,
   CapabilityRef,
@@ -26,6 +30,7 @@ import type {
   Pulse,
   RoleDetail,
   RoleRef,
+  RoleSuggestResult,
   SavedItem,
   SearchResults,
   SkillGaps,
@@ -155,6 +160,8 @@ export const api = {
   saved: (userId: string, signal?: AbortSignal) => request<SavedItem[]>(`/feed/${userId}/saved`, { signal }),
   streak: (userId: string, signal?: AbortSignal) => request<Streak>(`/streaks/${userId}`, { signal }),
   touchStreak: (userId: string) => request<Streak>(`/streaks/${userId}/touch`, { method: "POST" }),
+  badges: (userId: string, signal?: AbortSignal) => request<Badges>(`/badges/${userId}`, { signal }),
+  logTime: (userId: string, seconds: number) => request<Badges>(`/badges/${userId}/time`, { method: "POST", body: { seconds } }),
 
   pushCategories: (signal?: AbortSignal) => request<PushCategories>("/push/categories", { signal }),
   pushPublicKey: (userId: string, signal?: AbortSignal) =>
@@ -177,6 +184,12 @@ export const api = {
     request<CompanyOut[]>(`/taxonomy/companies${qs({ q, domain_id: domainId, limit, mba })}`, { signal }),
   companyDetail: (id: string, signal?: AbortSignal) => request<CompanyDetail>(`/taxonomy/companies/${id}`, { signal }),
   industries: (signal?: AbortSignal) => request<NamedRef[]>("/taxonomy/industries", { signal }),
+  suggestRole: (query: string, signal?: AbortSignal) =>
+    request<RoleSuggestResult>("/taxonomy/roles/suggest", { method: "POST", body: { query }, signal }),
+  addRole: (body: AddRoleBody) => request<RoleRef>("/taxonomy/roles", { method: "POST", body }),
+  suggestCompany: (query: string, website: string | null, signal?: AbortSignal) =>
+    request<CompanySuggestResult>("/taxonomy/companies/suggest", { method: "POST", body: { query, website }, signal }),
+  addCompany: (body: AddCompanyBody) => request<CompanyOut>("/taxonomy/companies", { method: "POST", body }),
   capabilities: (q: string, domainId?: string | null, kind?: CapabilityKind, signal?: AbortSignal, limit = 40, mba = false) =>
     request<CapabilityRef[]>(`/taxonomy/capabilities${qs({ q, kind, domain_id: domainId, limit, mba })}`, { signal }),
 

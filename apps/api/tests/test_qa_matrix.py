@@ -801,7 +801,7 @@ def test_OPS_health(client):
     assert r.status_code == 200 and r.json()["status"] == "ok"
 
 
-@pytest.mark.parametrize("method, path", [("GET", "/nope"), ("GET", "/taxonomy/nope"), ("POST", "/taxonomy/roles"), ("DELETE", "/auth/me"), ("PUT", "/auth/login"), ("GET", "/auth/signup")])
+@pytest.mark.parametrize("method, path", [("GET", "/nope"), ("GET", "/taxonomy/nope"), ("POST", "/taxonomy/domains"), ("DELETE", "/auth/me"), ("PUT", "/auth/login"), ("GET", "/auth/signup")])
 def test_OPS_unknown_routes_and_wrong_methods_are_4xx(client, method, path):
     assert client.request(method, path).status_code in {404, 405}
 

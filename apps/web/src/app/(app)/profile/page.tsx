@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BadgesCard } from "@/components/badges-card";
 import { DomainGrid } from "@/components/domain-grid";
 import { EntityPicker, fromCapability, fromCompany, fromRole, type PickItem } from "@/components/entity-picker";
 import { InstallCard } from "@/components/install-card";
@@ -403,6 +404,8 @@ export default function ProfilePage() {
       <InstallCard />
 
       <NotificationsCard userId={profile.user_id} />
+
+      <BadgesCard userId={profile.user_id} />
 
       <Card>
         <h2 className="font-display text-xl">Pop quiz</h2>

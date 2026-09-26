@@ -189,6 +189,7 @@ class CompanyDetail(BaseModel):
     id: str
     name: str
     industry: NamedRef | None
+    website: str | None = None
     roles_by_domain: list[DomainRoles]
     articles: list[ArticleBrief]
 
@@ -267,6 +268,24 @@ class StreakOut(BaseModel):
     current_streak: int
     longest_streak: int
     active_today: bool
+
+
+class BadgeOut(BaseModel):
+    id: str
+    kind: Literal["streak", "articles", "time"]
+    label: str
+    description: str
+    threshold: int
+    current: int
+    achieved: bool
+
+
+class BadgesOut(BaseModel):
+    badges: list[BadgeOut]
+
+
+class TimeIn(BaseModel):
+    seconds: int = Field(ge=1, le=120)
 
 
 class PushKeysIn(BaseModel):
@@ -382,3 +401,36 @@ class JDGapsOut(BaseModel):
     jd_count: int
     coverage: int
     skills: list[JDGap]
+
+
+class WebResultOut(BaseModel):
+    title: str
+    snippet: str
+    url: str
+
+
+class SuggestIn(BaseModel):
+    query: str = Field(min_length=1, max_length=140)
+    website: str | None = Field(default=None, max_length=300)  # companies only; ignored for roles
+
+
+class RoleSuggestOut(BaseModel):
+    matches: list[RoleRef]
+    web_results: list[WebResultOut]
+
+
+class CompanySuggestOut(BaseModel):
+    matches: list[CompanyOut]
+    web_results: list[WebResultOut]
+    site_meta: WebResultOut | None = None
+
+
+class AddRoleIn(BaseModel):
+    title: str = Field(min_length=2, max_length=140)
+    domain_id: str | None = None
+    description: str | None = Field(default=None, max_length=500)
+
+
+class AddCompanyIn(BaseModel):
+    name: str = Field(min_length=2, max_length=140)
+    website: str | None = Field(default=None, max_length=300)

@@ -29,6 +29,16 @@ export function setUserId(id: string, account = false): void {
   window.dispatchEvent(new Event(EVENT));
 }
 
+/** A device id to act as, creating a guest one on the spot if this is the first time it's needed
+ * (e.g. adding a missing role/company mid-onboarding, before the account exists yet). */
+export function ensureUserId(): string {
+  const existing = getUserId();
+  if (existing) return existing;
+  const id = createUserId();
+  setUserId(id);
+  return id;
+}
+
 export function isAccount(): boolean {
   try {
     return typeof window !== "undefined" && window.localStorage.getItem(ACCOUNT_KEY) === "1";
