@@ -1,0 +1,50 @@
+# Sends the push notification jobs on a schedule. Same reasoning as ingest.yml: Vercel's
+# serverless functions can't sustain the in-process background scheduler (VANTAGE_SCHEDULER=0 in
+# production), so GitHub Actions does it instead. Four kinds, spread an hour apart so a reader who
+# qualifies for more than one never gets them all at once — each still only fires when its own
+# once-a-day (or, for games_nudge, once-every-few-days) check says it's actually due.
+#
+# Setup: add repository secrets DATABASE_URL (already required by ingest.yml), VAPID_PUBLIC_KEY,
+# VAPID_PRIVATE_KEY and VAPID_SUBJECT (the same three values set on the Vantage API's Vercel
+# project — Settings > Environment Variables there).
+name: notifications
+
+on:
+  schedule:
+    - cron: "0 14 * * *" # streak_reminder
+    - cron: "0 15 * * *" # news_alert
+    - cron: "0 16 * * *" # entity_updates
+    - cron: "0 17 * * *" # games_nudge (internally gated to every few days, not daily)
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "streak_reminder, news_alert, entity_updates or games_nudge"
+        default: "streak_reminder"
+
+concurrency:
+  group: notifications
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Send the due notification
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          KIND: ${{ github.event_name == 'schedule' && (github.event.schedule == '0 14 * * *' && 'streak_reminder' || github.event.schedule == '0 15 * * *' && 'news_alert' || github.event.schedule == '0 16 * * *' && 'entity_updates' || 'games_nudge') || github.event.inputs.kind }}
+        run: python -m app.scheduler --once "$KIND"

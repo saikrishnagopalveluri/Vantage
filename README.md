@@ -82,6 +82,8 @@ Row level security matters here: Supabase publishes the tables of the `public` s
 
 **4. News (GitHub).** Push the repo to GitHub and add a repository secret `DATABASE_URL` (the Transaction pooler string). `.github/workflows/ingest.yml` then pulls the feeds every hour and does the daily clean-up at 03:05 UTC. Run it once by hand from the Actions tab to fill the feed straight away.
 
+**5. Push notifications (GitHub).** Same reasoning: add three more repository secrets — `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` (the same values set on the API's Vercel project). `.github/workflows/notifications.yml` then sends the four notification kinds (streak reminder, news alert, role/company updates, a games nudge) at 14:00–17:00 UTC, an hour apart. Each only actually sends when its own once-a-day (or, for the games nudge, once-every-few-days) check says it's due, so a manual re-run from the Actions tab the same day is a safe no-op.
+
 Limits to know about:
 - The login throttle is kept in memory, so on Vercel it applies per running instance, which is weak against a determined attacker. Put Vercel's firewall rate limiting on `/api/auth/*`, or move the counter into the database.
 - The first request after a quiet period is slower (a cold start).
@@ -158,10 +160,16 @@ The API pulls every feed once an hour and runs a clean-up once a day, on its own
 | `VANTAGE_SCHEDULER` | `1` | `0` turns the built-in scheduler off (use this if you run the scheduler as its own process) |
 | `VANTAGE_INGEST_EVERY_MINUTES` | `60` | How often to pull feeds |
 | `VANTAGE_DAILY_HOUR_UTC` | `3` | Hour of the daily clean-up |
+| `VANTAGE_STREAK_REMINDER_HOUR_UTC` | `14` | Hour of the streak-at-risk push |
+| `VANTAGE_NEWS_ALERT_HOUR_UTC` | `15` | Hour of the best-critical-story push |
+| `VANTAGE_ENTITY_UPDATES_HOUR_UTC` | `16` | Hour of the role/company update push |
+| `VANTAGE_GAMES_NUDGE_EVERY_DAYS` | `3` | How often to check for inactive players to nudge |
 
 ```bash
-.venv/Scripts/python -m app.scheduler                 # run the scheduler as its own process
-.venv/Scripts/python -m app.scheduler --once hourly   # one pull now, then exit (also: daily)
+.venv/Scripts/python -m app.scheduler                          # run the scheduler as its own process
+.venv/Scripts/python -m app.scheduler --once hourly             # one pull now, then exit (also: daily)
+.venv/Scripts/python -m app.scheduler --once streak_reminder    # send that notification kind now, if due
+                                                                  # (also: news_alert, entity_updates, games_nudge)
 ```
 
 The scheduler only runs while a Python process is running. To have it survive reboots on Windows, start `python -m app.scheduler` from Task Scheduler at log-on; on Linux use a systemd service or `@reboot` cron entry.

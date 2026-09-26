@@ -329,8 +329,25 @@ if __name__ == "__main__":
             "games_nudge": run_games_nudges,
         }
         if kind in notification_runners:
-            reminder_run = notification_runners[kind](SessionLocal)
-            print(reminder_run and {"sent": reminder_run.sent})
+            # Same due-check tick() uses, so a workflow re-run (retry, manual dispatch the same
+            # day) can't double-send — --once used to skip straight to sending, unconditionally.
+            now = datetime.now(timezone.utc)
+            hour_env = {
+                "streak_reminder": "VANTAGE_STREAK_REMINDER_HOUR_UTC",
+                "news_alert": "VANTAGE_NEWS_ALERT_HOUR_UTC",
+                "entity_updates": "VANTAGE_ENTITY_UPDATES_HOUR_UTC",
+            }
+            with SessionLocal() as db:
+                if kind == "games_nudge":
+                    due = is_notification_due_every(db, kind, now, timedelta(days=int(os.getenv("VANTAGE_GAMES_NUDGE_EVERY_DAYS", "3"))))
+                else:
+                    default_hour = {"streak_reminder": "14", "news_alert": "15", "entity_updates": "16"}[kind]
+                    due = is_notification_due(db, kind, now, int(os.getenv(hour_env[kind], default_hour)))
+            if not due:
+                print(f"{kind}: not due yet")
+            else:
+                reminder_run = notification_runners[kind](SessionLocal, now)
+                print(reminder_run and {"sent": reminder_run.sent})
         else:
             result = run_job(SessionLocal, kind)
             print(result and {"added": result.articles_added, "failed": result.sources_failed, "pruned": result.articles_pruned})
