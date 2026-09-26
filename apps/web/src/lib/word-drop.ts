@@ -7,6 +7,7 @@ export const MAX_GUESSES = 6;
 export const MIN_LEN = 4;
 export const MAX_LEN = 8;
 export const MAX_HINTS = 2;
+export const REMEMBER_SEEN = 15; // how many recent words to avoid repeating, before they're fair game again
 
 export type LetterState = "correct" | "present" | "absent";
 export type CapabilityKind = "skill" | "tool";
@@ -19,10 +20,14 @@ export interface WordTarget {
 /** Picks one real skill or tool name that's a clean single word (letters only, a fair length for a
  *  guessing grid). Multi-word or punctuated names ("Power BI", "C++") are skipped: there is no wordlist
  *  behind this game, so a guess only has to be the right length, not a real word, and that only works
- *  cleanly for single tokens. */
-export function pickTarget(capabilities: { name: string; kind: CapabilityKind }[]): WordTarget | null {
-  const candidates = capabilities.filter((c) => /^[A-Za-z]+$/.test(c.name.trim()) && c.name.trim().length >= MIN_LEN && c.name.trim().length <= MAX_LEN);
-  if (candidates.length === 0) return null;
+ *  cleanly for single tokens. `exclude` (recently-seen words) is honoured only if enough candidates
+ *  remain without it — a small taxonomy slice should never make the round fail to start. */
+export function pickTarget(capabilities: { name: string; kind: CapabilityKind }[], exclude: string[] = []): WordTarget | null {
+  const eligible = capabilities.filter((c) => /^[A-Za-z]+$/.test(c.name.trim()) && c.name.trim().length >= MIN_LEN && c.name.trim().length <= MAX_LEN);
+  if (eligible.length === 0) return null;
+  const excluded = new Set(exclude.map((w) => w.toUpperCase()));
+  const fresh = eligible.filter((c) => !excluded.has(c.name.trim().toUpperCase()));
+  const candidates = fresh.length > 0 ? fresh : eligible;
   const picked = candidates[Math.floor(Math.random() * candidates.length)];
   return { word: picked.name.trim().toUpperCase(), kind: picked.kind };
 }
@@ -114,6 +119,28 @@ export function saveWordIfBest(state: WordState): boolean {
     window.localStorage.setItem(BEST_KEY, String(guesses));
   } catch {}
   return true;
+}
+
+// ---- recently seen -----------------------------------------------------------------------------------------------------
+
+const SEEN_KEY = "vantage.worddrop.seen";
+
+export function readSeenWords(): string[] {
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((w): w is string => typeof w === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Keeps only the most recent REMEMBER_SEEN words, newest first, so an older word becomes fair game again. */
+export function rememberWord(word: string): void {
+  try {
+    const seen = [word.toUpperCase(), ...readSeenWords().filter((w) => w !== word.toUpperCase())].slice(0, REMEMBER_SEEN);
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+  } catch {}
 }
 
 // ---- share card ------------------------------------------------------------------------------------------------------

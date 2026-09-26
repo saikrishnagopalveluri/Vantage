@@ -21,6 +21,20 @@ test.describe("rules", () => {
     expect(pickTarget([{ name: "Power BI", kind: "tool" }, { name: "SQL", kind: "tool" }, { name: "C++", kind: "tool" }])).toBeNull();
   });
 
+  test("avoids a recently-seen word while another candidate is still available", () => {
+    const pool = [{ name: "Excel", kind: "tool" as const }, { name: "Canva", kind: "tool" as const }];
+    for (let i = 0; i < 20; i++) {
+      const target = pickTarget(pool, ["EXCEL"]);
+      expect(target!.word).toBe("CANVA");
+    }
+  });
+
+  test("falls back to a recently-seen word rather than fail to start, once the pool is exhausted", () => {
+    const pool = [{ name: "Excel", kind: "tool" as const }];
+    const target = pickTarget(pool, ["EXCEL"]);
+    expect(target!.word).toBe("EXCEL");
+  });
+
   test("a hint reveals the kind, then the first letter, capped at MAX_HINTS and free of charge", () => {
     let state = newWordState({ word: "EXCEL", kind: "tool" });
     expect(hintText(state)).toEqual([]);

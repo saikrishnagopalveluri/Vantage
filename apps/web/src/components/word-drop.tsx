@@ -8,7 +8,9 @@ import {
   hintText,
   newWordState,
   pickTarget,
+  readSeenWords,
   readWordBest,
+  rememberWord,
   saveWordIfBest,
   scoreGuess,
   submitGuess,
@@ -125,12 +127,16 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
     fetching.current = true;
     const controller = new AbortController();
     api
-      .capabilities("", null, undefined, controller.signal, 80, true)
+      .capabilities("", null, undefined, controller.signal, 500)
       .then((capabilities) => {
         fetching.current = false;
-        const target = pickTarget(capabilities);
-        if (target) dispatch({ type: "loaded", target });
-        else dispatch({ type: "failed", message: "We couldn't find a short enough skill or tool name. Try again in a moment." });
+        const target = pickTarget(capabilities, readSeenWords());
+        if (target) {
+          rememberWord(target.word);
+          dispatch({ type: "loaded", target });
+        } else {
+          dispatch({ type: "failed", message: "We couldn't find a short enough skill or tool name. Try again in a moment." });
+        }
       })
       .catch((e: Error) => {
         fetching.current = false;
