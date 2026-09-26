@@ -107,6 +107,9 @@ export default function CareerPage() {
         title="What's between you and the job"
         subtitle="Compare what employers ask for with what you can already do."
       />
+      <p className="mb-5 max-w-md text-[15px] text-muted">
+        Have an actual posting in hand? Switch to <strong className="text-ink">Job descriptions</strong> below and paste it in for a match built from that exact listing.
+      </p>
 
       <div className="mb-5 max-w-md">
         <Segmented
