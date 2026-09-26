@@ -185,7 +185,10 @@ function GapRow({ gap, onOwn, pending }: { gap: JDGap; onOwn: (gap: JDGap) => vo
         </p>
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
-        <div className={cx("h-full rounded-full transition-[width] duration-700", gap.user_has_it ? "bg-good" : "bg-accent")} style={{ width: `${Math.round((gap.jd_count / gap.jd_total) * 100)}%` }} />
+        <div
+          className={cx("h-full w-full origin-left rounded-full transition-transform duration-700 ease-out", gap.user_has_it ? "bg-good" : "bg-accent")}
+          style={{ transform: `scaleX(${gap.jd_count / gap.jd_total})` }}
+        />
       </div>
       <div className="mt-2 flex items-center justify-between gap-3">
         {gap.user_has_it ? (

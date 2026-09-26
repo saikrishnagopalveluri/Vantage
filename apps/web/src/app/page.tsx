@@ -192,8 +192,7 @@ export default function Home() {
       <main className="px-safe mx-auto w-full max-w-5xl md:px-8">
         <section className="grid gap-8 py-10 md:py-16 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
           <div className="rise">
-            <p className="font-mono text-xs text-muted">For management students first, and people already working</p>
-            <h1 className="mt-3 font-display text-[40px] leading-[1.04] md:text-[58px]">Career news that fits you.</h1>
+            <h1 className="font-display text-[40px] leading-[1.04] md:text-[58px]">Career news that fits you.</h1>
             <p className="mt-4 max-w-lg text-[17px] leading-relaxed text-muted">
               Vantage reads business and tech news, then tells you why each story matters for your job hunt or your job. It is built first for MBA and PGDM
               students getting ready for placements.

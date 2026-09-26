@@ -1,23 +1,30 @@
 "use client";
 
 import { useId, useState } from "react";
-import { drawShareCard, intents, type ShareCard } from "@/lib/share";
+import { intents } from "@/lib/share";
 import { CopyIcon, DownloadIcon, ShareIcon } from "../icons";
 import { Button } from "../ui";
 
-/** The "post your score" section on a mini-game's over screen: a native share sheet (with the score
- *  card attached as an image, on a phone that supports it — this is what lets WhatsApp and Instagram
- *  pick it up directly), WhatsApp/LinkedIn/X links as a fallback, and a plain save/copy for anywhere
- *  else. Shared by every game so they all look and behave the same way; only the card and the wording
- *  change per game. */
-export function ShareBar({
+/** The "post your score" section on a mini-game's (or a badge's) over/unlock screen: a native share
+ *  sheet (with the card attached as an image, on a phone that supports it — this is what lets
+ *  WhatsApp and Instagram pick it up directly), WhatsApp/LinkedIn/X links as a fallback, and a plain
+ *  save/copy for anywhere else. Shared so every card looks and behaves the same way; only the card
+ *  data, how it's drawn, and the wording change per caller. */
+export function ShareBar<T>({
   card,
+  draw,
+  heading = "Post your score",
+  subheading = "Your post shows only your score. Not your name, email or profile.",
   fileName,
   shareTitle,
   shareText,
   url,
 }: {
-  card: ShareCard;
+  card: T;
+  /** How to render `card` onto the canvas — e.g. `drawShareCard` for a game's score card. */
+  draw: (card: T, origin: string) => Promise<Blob>;
+  heading?: string;
+  subheading?: string;
   fileName: string;
   shareTitle: string;
   shareText: string;
@@ -28,7 +35,7 @@ export function ShareBar({
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
-  const image = () => drawShareCard(card, origin);
+  const image = () => draw(card, origin);
 
   const share = async () => {
     try {
@@ -67,9 +74,9 @@ export function ShareBar({
   return (
     <section aria-labelledby={titleId} className="raised rounded-2xl p-4">
       <h3 id={titleId} className="font-display text-xl">
-        Post your score
+        {heading}
       </h3>
-      <p className="mt-1 text-sm text-muted">Your post shows only your score. Not your name, email or profile.</p>
+      <p className="mt-1 text-sm text-muted">{subheading}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {canShare && (
           <Button variant="primary" onClick={share} className="px-3.5">

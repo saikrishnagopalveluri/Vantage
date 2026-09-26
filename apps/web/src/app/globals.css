@@ -109,7 +109,49 @@ p { text-wrap: pretty; }
   border-radius: 6px;
 }
 
-dialog::backdrop { background: rgb(0 0 0 / 0.55); }
+/* Every dialog gets a brief, deliberate entrance instead of the native instant pop: a gentle
+   scale + fade (well inside the 200-500ms band a modal earns), never from scale(0) — see
+   .sheet below for the bottom-sheet's own slide-up variant. Unsupported browsers just skip the
+   @starting-style/allow-discrete rules and show the final, correct state — no animation, no bug. */
+dialog:not(.sheet) {
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out), overlay 200ms allow-discrete, display 200ms allow-discrete;
+}
+dialog:not(.sheet)[open] { opacity: 1; transform: none; }
+@starting-style {
+  dialog:not(.sheet)[open] { opacity: 0; transform: scale(0.96); }
+}
+
+/* The Sheet component: docked to the bottom on a phone, so it slides up by its own height (not a
+   hardcoded pixel value) with the iOS-like drawer curve; centered on wider screens, where it scales
+   in like any other dialog instead. */
+dialog.sheet {
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 250ms var(--ease-out), transform 350ms cubic-bezier(0.32, 0.72, 0, 1), overlay 350ms allow-discrete, display 350ms allow-discrete;
+}
+dialog.sheet[open] { opacity: 1; transform: none; }
+@starting-style {
+  dialog.sheet[open] { opacity: 0; transform: translateY(100%); }
+}
+@media (min-width: 768px) {
+  dialog.sheet { transform: scale(0.96); transition-duration: 220ms; }
+  dialog.sheet[open] { transform: none; }
+  @starting-style {
+    dialog.sheet[open] { transform: scale(0.96); }
+  }
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out), overlay 200ms allow-discrete, display 200ms allow-discrete;
+}
+dialog[open]::backdrop { opacity: 1; }
+@starting-style {
+  dialog[open]::backdrop { opacity: 0; }
+}
 
 /* Flat surfaces: a paper colour and a hairline edge, no shadow. */
 .raised {

@@ -17,6 +17,17 @@ test.describe("rules", () => {
     expect(target!.kind).toBe(target!.word === "EXCEL" ? "tool" : "skill");
   });
 
+  test("the pool isn't limited to skills and tools — a role or company title is a fair candidate too", () => {
+    const target = pickTarget([
+      { name: "Analyst", kind: "role" },
+      { name: "Brand Manager", kind: "role" }, // has a space: skipped
+      { name: "Infosys", kind: "company" },
+    ]);
+    expect(target).not.toBeNull();
+    expect(["ANALYST", "INFOSYS"]).toContain(target!.word);
+    expect(target!.kind).toBe(target!.word === "ANALYST" ? "role" : "company");
+  });
+
   test("returns null when nothing in the batch is usable", () => {
     expect(pickTarget([{ name: "Power BI", kind: "tool" }, { name: "SQL", kind: "tool" }, { name: "C++", kind: "tool" }])).toBeNull();
   });
@@ -94,6 +105,9 @@ async function stubCapabilities(page: Page) {
   await page.route("**/api/taxonomy/capabilities**", (route) =>
     route.fulfill({ contentType: "application/json", body: JSON.stringify([{ id: "1", name: "Excel", kind: "tool" }]) }),
   );
+  // The pool also pulls in roles and companies now; stub those empty so Excel stays the only candidate.
+  await page.route("**/api/taxonomy/roles**", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.route("**/api/taxonomy/companies**", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
 }
 
 const dialog = (page: Page) => page.getByRole("dialog");

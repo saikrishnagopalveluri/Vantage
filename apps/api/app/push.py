@@ -9,13 +9,25 @@ import json
 import os
 import random
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from pywebpush import WebPushException, webpush
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import PushSubscription, UserStreak
+from app.feed import load_context, rank
+from app.models import (
+    Article,
+    ArticleTag,
+    Company,
+    PushSubscription,
+    Role,
+    TagType,
+    UserProfile,
+    UserStreak,
+    UserTargetCompany,
+    UserTargetRole,
+)
 
 CATEGORIES: dict[str, str] = {
     "streak": "Daily streak",
@@ -72,33 +84,39 @@ def send(db: Session, subscription: PushSubscription, notification: Notification
 # ---- copy bank ---------------------------------------------------------------------------------
 
 _STREAK_AT_RISK = [
-    "Your {n}-day streak is hanging by a thread. One tap keeps it alive.",
-    "{n} days in. Don't let today be the day it ends.",
-    "The streak is watching you not open the app right now.",
-    "Quick one — your {n}-day streak needs 10 seconds of your time today.",
+    "Your {n}-day streak is one bad decision away from zero. Don't do this to yourself.",
+    "{n} days of showing up, about to be undone by you closing this notification. We see you.",
+    "POV: you let a {n}-day streak die today. Plot twist, you don't have to.",
+    "The streak is currently in its flop era. You have the power to fix this.",
+    "{n} days in a row and you're really about to no-show today? Bold choice.",
 ]
 _STREAK_MILESTONE = [
-    "{n} days straight. That's not luck, that's a habit.",
-    "{n}-day streak. Somebody's actually consistent for once.",
-    "{n} days in a row. Keep going, this is the fun part.",
+    "{n} days straight. That's not luck, that's discipline arc.",
+    "{n}-day streak. Certified consistent behavior, actually.",
+    "{n} days in a row. Main character energy, keep it going.",
+    "{n} days. You're basically unbothered at this point. Respect.",
 ]
 _NEWS_CRITICAL = [
-    "{headline} — this one's got your name on it.",
-    "You're gonna want to see this: {headline}",
-    "{company} just did something you should know about.",
+    "{headline} — this one has your name written all over it, no cap.",
+    "Drop everything, you need to see this: {headline}",
+    "{company} just did something and your future self needs to know.",
+    "Not us gatekeeping this from you: {headline}",
 ]
 _GAMES_NUDGE = [
-    "Your Word Drop streak called. It misses you.",
-    "60 seconds. That's all Speed Round needs from you right now.",
-    "Someone just beat your Match the Field score. Rude, honestly.",
+    "Word Drop texted. It's asking if you're okay because you ghosted it.",
+    "60 seconds. Speed Round is not asking for much here.",
+    "Someone beat your Match the Field score. The audacity. Go fix that.",
+    "Your games are sitting there, untouched, judging you quietly.",
 ]
 _ROLE_UPDATE = [
-    "New {role} openings just landed at companies you follow.",
-    "{company} is hiring for {role}. You called this.",
+    "New {role} openings just dropped at companies you follow. Manifesting, but make it actionable.",
+    "{company} is hiring for {role}. This is basically fate texting you.",
+    "{role} roles just opened up. Your era might be starting.",
 ]
 _COMPANY_UPDATE = [
-    "{company}'s in the news again. Get the full story.",
-    "Something's brewing at {company}.",
+    "{company}'s in the news again. Main character behavior over there.",
+    "Something's brewing at {company} and you should probably know about it.",
+    "{company} said 'let them know' — so here we are.",
 ]
 
 
@@ -114,16 +132,16 @@ def streak_milestone(n: int) -> Notification:
 
 def news_critical(headline: str, company: str | None) -> Notification:
     body = random.choice(_NEWS_CRITICAL).format(headline=headline, company=company or "A company you follow")
-    return Notification(title="Read this one", body=body, url="/feed")
+    return Notification(title="Okay you need to see this 👀", body=body, url="/feed")
 
 
 def games_nudge() -> Notification:
-    return Notification(title="Games are calling 🎮", body=random.choice(_GAMES_NUDGE), url="/games")
+    return Notification(title="Games miss you 🎮", body=random.choice(_GAMES_NUDGE), url="/games")
 
 
 def role_update(role: str, company: str | None) -> Notification:
     body = random.choice(_ROLE_UPDATE).format(role=role, company=company or "A company you follow")
-    return Notification(title="Role you'd want", body=body, url="/explore")
+    return Notification(title="This one's for you ✨", body=body, url="/explore")
 
 
 def company_update(company: str) -> Notification:
@@ -151,6 +169,110 @@ def send_streak_reminders(db: Session, today: date) -> int:
                 continue
             if send(db, sub, streak_at_risk(streak.current_streak)):
                 sub.last_sent_at = datetime.now(timezone.utc)
+                sent += 1
+    if sent:
+        db.commit()
+    return sent
+
+
+def _subs_by_category(db: Session, category: str) -> dict[str, list[PushSubscription]]:
+    grouped: dict[str, list[PushSubscription]] = {}
+    for sub in db.scalars(select(PushSubscription)):
+        if category in sub.categories:
+            grouped.setdefault(sub.user_id, []).append(sub)
+    return grouped
+
+
+def send_news_alerts(db: Session, now: datetime) -> int:
+    """Once a day: the single best new CRITICAL-tier story published since this time yesterday, for
+    anyone subscribed to 'news'. Reuses the same ranker the feed itself uses, so "critical" means
+    exactly what it means on the feed page — no separate notion of newsworthiness to keep in sync."""
+    since = now - timedelta(hours=24)
+    sent = 0
+    for user_id, subs in _subs_by_category(db, "news").items():
+        profile = db.get(UserProfile, user_id)
+        if profile is None:
+            continue
+        ctx = load_context(db, profile)
+        ranked = rank(db, profile, ctx, "for_you", now)
+        best = next((r for r in ranked if r.tier == "critical" and r.published >= since), None)
+        if best is None:
+            continue
+        company = best.matched["companies"][0] if best.matched["companies"] else None
+        notification = news_critical(best.article.title, company)
+        for sub in subs:
+            if send(db, sub, notification):
+                sub.last_sent_at = now
+                sent += 1
+    if sent:
+        db.commit()
+    return sent
+
+
+def send_entity_updates(db: Session, now: datetime) -> int:
+    """Once a day: the newest article tagged with a role or company the reader targets, published
+    since this time yesterday. role_update and company_update are the same mechanism against a
+    different tag type and target set, so they're handled together here."""
+    since = now - timedelta(hours=24)
+    sent = 0
+    role_subs = _subs_by_category(db, "role_update")
+    company_subs = _subs_by_category(db, "company_update")
+    for user_id in role_subs.keys() | company_subs.keys():
+        if user_id in role_subs:
+            target_role_ids = set(db.scalars(select(UserTargetRole.role_id).where(UserTargetRole.user_id == user_id)))
+            hit = None
+            if target_role_ids:
+                hit = db.execute(
+                    select(ArticleTag.ref_id)
+                    .join(Article, Article.id == ArticleTag.article_id)
+                    .where(ArticleTag.tag_type == TagType.ROLE, ArticleTag.ref_id.in_(target_role_ids), Article.published_at >= since)
+                    .order_by(Article.published_at.desc())
+                    .limit(1)
+                ).first()
+            if hit is not None:
+                role = db.get(Role, hit[0])
+                notification = role_update(role.title if role else "A role you follow", None)
+                for sub in role_subs[user_id]:
+                    if send(db, sub, notification):
+                        sub.last_sent_at = now
+                        sent += 1
+
+        if user_id in company_subs:
+            target_company_ids = set(db.scalars(select(UserTargetCompany.company_id).where(UserTargetCompany.user_id == user_id)))
+            hit = None
+            if target_company_ids:
+                hit = db.execute(
+                    select(ArticleTag.ref_id)
+                    .join(Article, Article.id == ArticleTag.article_id)
+                    .where(ArticleTag.tag_type == TagType.COMPANY, ArticleTag.ref_id.in_(target_company_ids), Article.published_at >= since)
+                    .order_by(Article.published_at.desc())
+                    .limit(1)
+                ).first()
+            if hit is not None:
+                company = db.get(Company, hit[0])
+                notification = company_update(company.name if company else "A company you follow")
+                for sub in company_subs[user_id]:
+                    if send(db, sub, notification):
+                        sub.last_sent_at = now
+                        sent += 1
+    if sent:
+        db.commit()
+    return sent
+
+
+def send_games_nudges(db: Session, now: datetime, inactive_days: int = 3) -> int:
+    """Nudges anyone subscribed to 'games' who hasn't opened Vantage in a while. The caller decides
+    the cadence (see scheduler.py) — this only decides who, given that it's due."""
+    cutoff = (now - timedelta(days=inactive_days)).date()
+    sent = 0
+    for user_id, subs in _subs_by_category(db, "games").items():
+        streak = db.get(UserStreak, user_id)
+        if streak is None or streak.last_active_on is None or streak.last_active_on >= cutoff:
+            continue
+        notification = games_nudge()
+        for sub in subs:
+            if send(db, sub, notification):
+                sub.last_sent_at = now
                 sent += 1
     if sent:
         db.commit()

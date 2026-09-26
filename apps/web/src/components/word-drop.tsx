@@ -20,6 +20,7 @@ import {
   type WordState,
   type WordTarget,
 } from "@/lib/word-drop";
+import { drawShareCard } from "@/lib/share";
 import { CloseIcon } from "./icons";
 import { ShareBar } from "./games/share-bar";
 import { PartnerBadge } from "./partner-badge";
@@ -121,16 +122,26 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  // One real skill or tool, once per round.
+  // One real skill, tool, role or company, once per round — pooled from across the whole taxonomy
+  // rather than one kind, so the round-to-round variety isn't capped by how many capability names
+  // happen to be short, single words.
   useEffect(() => {
     if (phase !== "loading" || fetching.current) return;
     fetching.current = true;
     const controller = new AbortController();
-    api
-      .capabilities("", null, undefined, controller.signal, 500)
-      .then((capabilities) => {
+    Promise.all([
+      api.capabilities("", null, undefined, controller.signal, 500),
+      api.roles("", null, controller.signal, 500),
+      api.companies("", null, controller.signal, 500),
+    ])
+      .then(([capabilities, roles, companies]) => {
         fetching.current = false;
-        const target = pickTarget(capabilities, readSeenWords());
+        const candidates = [
+          ...capabilities,
+          ...roles.map((r) => ({ name: r.title, kind: "role" as const })),
+          ...companies.map((c) => ({ name: c.name, kind: "company" as const })),
+        ];
+        const target = pickTarget(candidates, readSeenWords());
         if (target) {
           rememberWord(target.word);
           dispatch({ type: "loaded", target });
@@ -309,6 +320,7 @@ export function WordDrop({ onClose }: { onClose: () => void }) {
             {word.status === "won" && (
               <ShareBar
                 card={wordShareCard(word)}
+                draw={drawShareCard}
                 fileName="vantage-word-drop.png"
                 shareTitle="My Vantage Word Drop score"
                 shareText={`I solved Word Drop in ${word.guesses.length} ${word.guesses.length === 1 ? "guess" : "guesses"} on Vantage. Think you can beat that?`}

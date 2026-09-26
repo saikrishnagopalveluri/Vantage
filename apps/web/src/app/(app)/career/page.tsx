@@ -212,8 +212,11 @@ export default function CareerPage() {
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-sunken" aria-hidden>
                       <div
-                        className={cx("h-full rounded-full transition-[width] duration-700", gap.user_has_it ? "bg-good" : "bg-accent")}
-                        style={{ width: `${Math.round(gap.gap_ratio * 100)}%` }}
+                        className={cx(
+                          "h-full w-full origin-left rounded-full transition-transform duration-700 ease-out",
+                          gap.user_has_it ? "bg-good" : "bg-accent",
+                        )}
+                        style={{ transform: `scaleX(${gap.gap_ratio})` }}
                       />
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-3">

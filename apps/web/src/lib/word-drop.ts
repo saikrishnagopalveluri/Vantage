@@ -5,12 +5,12 @@ import type { ShareCard } from "./share";
 
 export const MAX_GUESSES = 6;
 export const MIN_LEN = 4;
-export const MAX_LEN = 8;
+export const MAX_LEN = 10;
 export const MAX_HINTS = 2;
 export const REMEMBER_SEEN = 15; // how many recent words to avoid repeating, before they're fair game again
 
 export type LetterState = "correct" | "present" | "absent";
-export type CapabilityKind = "skill" | "tool";
+export type CapabilityKind = "skill" | "tool" | "role" | "company";
 
 export interface WordTarget {
   word: string;
@@ -150,7 +150,7 @@ export function wordShareCard(state: WordState): ShareCard {
     game: "WORD DROP",
     headlineLabel: "solved in",
     headline: `${state.guesses.length} ${state.guesses.length === 1 ? "guess" : "guesses"}`,
-    stats: [{ value: state.kind === "tool" ? "Tool" : "Skill", label: "category" }],
+    stats: [{ value: state.kind[0].toUpperCase() + state.kind.slice(1), label: "category" }],
     footer: "Think you can beat it?",
   };
 }

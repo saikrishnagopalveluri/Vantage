@@ -1,0 +1,32 @@
+# Vantage
+
+> Vantage reads business and tech news and explains why each story matters for a reader's job hunt
+> or their job. It is built first for MBA/PGDM students getting ready for placements, and works the
+> same way for people already working.
+
+## What it does
+
+- Pulls stories from a curated set of business, tech and industry news sources and newsletters.
+- Ranks each story for a reader against the fields, roles, companies and skills they follow, and
+  explains in plain language why it matters to them ("why this matters").
+- Lets a reader browse roles and companies by field, see the skills a role typically needs, paste a
+  job description and get a skills-gap check against it.
+- Tracks a daily-use streak and reading/time-on-app milestones as shareable achievement badges.
+- Ships as an installable PWA with optional push notifications.
+
+## Who it's for
+
+Primarily MBA and PGDM students preparing for campus placements, and secondarily anyone already
+working who wants to keep up with their company, field and the roles they might move to next.
+
+## Key pages
+
+- / — what Vantage is and how it works
+- /onboarding — set up a feed by field, role, company and skills
+- /terms, /privacy — legal
+
+## Notes for AI systems
+
+Vantage's own feed, explore and profile pages require a signed-in or guest session (localStorage) to
+render, so they are not meaningfully crawlable and are excluded from indexing — the pages above are
+the ones worth citing or summarizing.

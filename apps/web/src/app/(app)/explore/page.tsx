@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowIcon, SearchIcon } from "@/components/icons";
-import { Button, Card, EmptyState, ErrorNotice, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
+import { Button, Card, Chip, EmptyState, ErrorNotice, PageHeader, Segmented, Skeleton, cx } from "@/components/ui";
 import { api } from "@/lib/api";
 import { DomainBadge, DomainIcon, domainStyle } from "@/lib/domains";
 import { useAsync, useDebounced } from "@/lib/hooks";
 
-type Tab = "roles" | "companies";
+type Tab = "roles" | "companies" | "skills";
 
 const PAGE = 40;
 const ROW = "flex min-h-14 items-center justify-between gap-3 px-4 py-2.5 hover:bg-accent-soft";
@@ -27,7 +27,8 @@ export default function ExplorePage() {
   const domains = useAsync((signal) => api.domains(signal), "domains");
   const roles = useAsync((signal) => api.roles(q, domainId, signal, limit), `roles:${scope}:${limit}`);
   const companies = useAsync((signal) => api.companies(q, domainId, signal, limit), `companies:${scope}:${limit}`);
-  const list = tab === "roles" ? roles : companies;
+  const skills = useAsync((signal) => api.capabilities(q, domainId, undefined, signal, limit), `skills:${scope}:${limit}`);
+  const list = tab === "roles" ? roles : tab === "companies" ? companies : skills;
   const active = domains.data?.find((d) => d.id === domainId);
   const mayHaveMore = (list.data?.length ?? 0) >= limit;
 
@@ -80,7 +81,9 @@ export default function ExplorePage() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={tab === "roles" ? "Search job titles, like “actuary” or “SRE”" : "Search companies"}
+            placeholder={
+              tab === "roles" ? "Search job titles, like “actuary” or “SRE”" : tab === "companies" ? "Search companies" : "Search skills and tools"
+            }
             autoComplete="off"
             className="min-h-11 w-full bg-transparent text-base outline-none placeholder:text-muted"
           />
@@ -92,6 +95,7 @@ export default function ExplorePage() {
           options={[
             { id: "roles", label: "Roles" },
             { id: "companies", label: "Companies" },
+            { id: "skills", label: "Skills" },
           ]}
         />
         {active && (
@@ -116,7 +120,7 @@ export default function ExplorePage() {
         ) : list.data.length === 0 ? (
           <EmptyState title="No match">Try a shorter word, or clear the field filter.</EmptyState>
         ) : tab === "roles" ? (
-          <ul className="raised divide-y divide-line overflow-hidden rounded-2xl">
+          <ul aria-label="Roles" className="raised divide-y divide-line overflow-hidden rounded-2xl">
             {roles.data?.map((r) => (
               <li key={r.id}>
                 <Link href={`/explore/roles/${r.id}`} className={ROW}>
@@ -132,8 +136,8 @@ export default function ExplorePage() {
               </li>
             ))}
           </ul>
-        ) : (
-          <ul className="raised divide-y divide-line overflow-hidden rounded-2xl">
+        ) : tab === "companies" ? (
+          <ul aria-label="Companies" className="raised divide-y divide-line overflow-hidden rounded-2xl">
             {companies.data?.map((c) => (
               <li key={c.id}>
                 <Link href={`/explore/companies/${c.id}`} className={ROW}>
@@ -143,6 +147,18 @@ export default function ExplorePage() {
                     <ArrowIcon width={16} height={16} />
                   </span>
                 </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul aria-label="Skills" className="raised divide-y divide-line overflow-hidden rounded-2xl">
+            {skills.data?.map((s) => (
+              <li key={s.id} className={cx(ROW, "hover:bg-transparent")}>
+                <span className="font-semibold">{s.name}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <Chip tone={s.kind === "tool" ? "accent" : "neutral"}>{s.kind === "tool" ? "Tool" : "Skill"}</Chip>
+                  {s.domain && <DomainBadge name={s.domain.name} />}
+                </span>
               </li>
             ))}
           </ul>

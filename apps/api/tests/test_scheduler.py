@@ -20,8 +20,10 @@ def fake_ingest(added=3):
 
 def test_hourly_job_runs_when_due_and_not_again_within_the_hour(session_factory):
     ingest = fake_ingest()
-    scheduler = Scheduler(session_factory, every_minutes=60, daily_hour=3, ingest=ingest)
-    assert scheduler.tick(NOW) == ["daily"]  # past 03:00 UTC and never run today: the daily job also ingests
+    scheduler = Scheduler(session_factory, every_minutes=60, daily_hour=3, games_nudge_every_days=9999, ingest=ingest)
+    # past 03:00 UTC and never run today: the daily job also ingests. games_nudge has never run at
+    # all yet either, so — same as "daily" the first time — it's due on this very first tick.
+    assert scheduler.tick(NOW) == ["daily", "games_nudge"]
     assert scheduler.tick(NOW + timedelta(minutes=20)) == []
     assert scheduler.tick(NOW + timedelta(minutes=61)) == ["hourly"]
     assert len(ingest.calls) == 2
@@ -32,11 +34,20 @@ def test_hourly_job_runs_when_due_and_not_again_within_the_hour(session_factory)
 
 
 def test_daily_job_waits_for_its_hour_and_runs_once_a_day(session_factory):
-    scheduler = Scheduler(session_factory, every_minutes=10_000, daily_hour=3, streak_reminder_hour=23, ingest=fake_ingest())
+    scheduler = Scheduler(
+        session_factory,
+        every_minutes=10_000,
+        daily_hour=3,
+        streak_reminder_hour=23,
+        news_alert_hour=23,
+        entity_updates_hour=23,
+        games_nudge_every_days=9999,
+        ingest=fake_ingest(),
+    )
     early = datetime(2026, 9, 20, 1, 0, tzinfo=UTC)
     with session_factory() as db:
         assert is_due(db, "daily", early, daily_hour=3) is False
-    assert scheduler.tick(datetime(2026, 9, 20, 3, 5, tzinfo=UTC)) == ["daily"]
+    assert scheduler.tick(datetime(2026, 9, 20, 3, 5, tzinfo=UTC)) == ["daily", "games_nudge"]  # games_nudge: first tick ever
     assert scheduler.tick(datetime(2026, 9, 20, 22, 0, tzinfo=UTC)) == []
     assert scheduler.tick(datetime(2026, 9, 21, 3, 5, tzinfo=UTC)) == ["daily"]
 
@@ -47,7 +58,16 @@ def test_streak_reminder_waits_for_its_hour_runs_once_a_day_and_reaches_an_at_ri
     sent: list[str] = []
     monkeypatch.setattr("app.push.webpush", lambda **kw: sent.append(kw["subscription_info"]["endpoint"]))
 
-    scheduler = Scheduler(session_factory, every_minutes=10_000, daily_hour=23, streak_reminder_hour=14, ingest=fake_ingest())
+    scheduler = Scheduler(
+        session_factory,
+        every_minutes=10_000,
+        daily_hour=23,
+        streak_reminder_hour=14,
+        news_alert_hour=23,
+        entity_updates_hour=23,
+        games_nudge_every_days=9999,
+        ingest=fake_ingest(),
+    )
     with session_factory() as db:
         db.add(UserStreak(user_id="u1", current_streak=5, longest_streak=5, last_active_on=date(2026, 9, 19)))
         db.add(PushSubscription(user_id="u1", endpoint="https://push.test/u1", p256dh="a", auth="b", categories=["streak"]))

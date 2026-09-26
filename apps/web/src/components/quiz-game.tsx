@@ -460,8 +460,8 @@ export function QuizGame({ userId, onClose }: { userId: string; onClose: () => v
           <div className="flex flex-1 flex-col">
             <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-sunken">
               <div
-                className={cx("h-full rounded-full transition-[width] duration-100 ease-linear", state.left <= 5 ? "bg-accent" : "bg-ink/70")}
-                style={{ width: `${phase === "revealed" ? 0 : Math.max(0, Math.min(100, (state.left / secondsFor(game.level)) * 100))}%` }}
+                className={cx("h-full w-full origin-left rounded-full transition-transform duration-100 ease-linear", state.left <= 5 ? "bg-accent" : "bg-ink/70")}
+                style={{ transform: `scaleX(${phase === "revealed" ? 0 : Math.max(0, Math.min(1, state.left / secondsFor(game.level)))})` }}
               />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">

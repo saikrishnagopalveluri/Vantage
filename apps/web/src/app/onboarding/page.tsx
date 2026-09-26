@@ -118,7 +118,7 @@ export default function OnboardingPage() {
         </div>
         {persona && (
           <div className="mx-auto h-1 w-full max-w-xl overflow-hidden rounded-full bg-sunken" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={stepIndex + 1}>
-            <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${((stepIndex + 1) / steps.length) * 100}%` }} />
+            <div className="h-full w-full origin-left rounded-full bg-accent transition-transform duration-500 ease-out" style={{ transform: `scaleX(${(stepIndex + 1) / steps.length})` }} />
           </div>
         )}
       </header>

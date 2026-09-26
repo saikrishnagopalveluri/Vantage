@@ -1,9 +1,20 @@
 import { expect, test, type Page } from "@playwright/test";
+import { badgeShareCard } from "../src/lib/badge-share";
 import { onboardAsStudent } from "./helpers";
 
 async function userId(page: Page): Promise<string> {
   return (await page.evaluate(() => localStorage.getItem("vantage.userId")))!;
 }
+
+test.describe("rules", () => {
+  test("the share card names the badge, its glyph and a formatted stat", () => {
+    const streak = badgeShareCard({ id: "streak_7", kind: "streak", label: "Week Streak", description: "7 days in a row", threshold: 7, current: 9, achieved: true });
+    expect(streak).toMatchObject({ glyph: "🔥", label: "Week Streak", statValue: "9", statLabel: "day streak" });
+
+    const time = badgeShareCard({ id: "time_3600", kind: "time", label: "First Hour", description: "1 hour on Vantage", threshold: 3600, current: 7500, achieved: true });
+    expect(time.statValue).toBe("2h"); // 7500s rounds down to whole hours once past 1h
+  });
+});
 
 test.describe("achievement badges", () => {
   test("a fresh student sees every badge locked, at the right progress", async ({ page }) => {

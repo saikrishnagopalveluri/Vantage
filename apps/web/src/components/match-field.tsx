@@ -15,6 +15,7 @@ import {
   tryMatch,
   type MatchState,
 } from "@/lib/match-field";
+import { drawShareCard } from "@/lib/share";
 import { CloseIcon } from "./icons";
 import { ShareBar } from "./games/share-bar";
 import { PartnerBadge } from "./partner-badge";
@@ -244,8 +245,8 @@ export function MatchField({ onClose }: { onClose: () => void }) {
           <div className="flex flex-1 flex-col">
             <div aria-hidden className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-sunken">
               <div
-                className={cx("h-full rounded-full transition-[width] duration-100 ease-linear", state.left <= 10 ? "bg-accent" : "bg-ink/70")}
-                style={{ width: `${Math.max(0, Math.min(100, (state.left / ROUND_SECONDS) * 100))}%` }}
+                className={cx("h-full w-full origin-left rounded-full transition-transform duration-100 ease-linear", state.left <= 10 ? "bg-accent" : "bg-ink/70")}
+                style={{ transform: `scaleX(${Math.max(0, Math.min(1, state.left / ROUND_SECONDS))})` }}
               />
             </div>
             <div className="mt-3 flex items-center gap-2 text-sm">
@@ -323,6 +324,7 @@ export function MatchField({ onClose }: { onClose: () => void }) {
             </div>
             <ShareBar
               card={matchShareCard(match)}
+              draw={drawShareCard}
               fileName="vantage-match-the-field.png"
               shareTitle="My Vantage Match the Field score"
               shareText={`I matched ${match.correct} ${match.correct === 1 ? "company" : "companies"} to their industry in ${ROUND_SECONDS} seconds on Vantage (${accuracy(match)}% accuracy). Think you can beat that?`}

@@ -17,6 +17,7 @@ import {
   speedShareCard,
   type SpeedGame,
 } from "@/lib/speed-round";
+import { drawShareCard } from "@/lib/share";
 import { CheckIcon, CloseIcon } from "./icons";
 import { ShareBar } from "./games/share-bar";
 import { PartnerBadge } from "./partner-badge";
@@ -276,8 +277,8 @@ export function SpeedRound({ userId, onClose }: { userId: string; onClose: () =>
           <div className="flex flex-1 flex-col">
             <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-sunken">
               <div
-                className={cx("h-full rounded-full transition-[width] duration-100 ease-linear", state.left <= 10 ? "bg-accent" : "bg-ink/70")}
-                style={{ width: `${Math.max(0, Math.min(100, (state.left / ROUND_SECONDS) * 100))}%` }}
+                className={cx("h-full w-full origin-left rounded-full transition-transform duration-100 ease-linear", state.left <= 10 ? "bg-accent" : "bg-ink/70")}
+                style={{ transform: `scaleX(${Math.max(0, Math.min(1, state.left / ROUND_SECONDS))})` }}
               />
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
@@ -343,6 +344,7 @@ export function SpeedRound({ userId, onClose }: { userId: string; onClose: () =>
             </div>
             <ShareBar
               card={speedShareCard(game)}
+              draw={drawShareCard}
               fileName="vantage-speed-round.png"
               shareTitle="My Vantage Speed Round score"
               shareText={`I got ${game.correct} right in ${ROUND_SECONDS} seconds on the Vantage Speed Round (${accuracy(game)}% accuracy). Think you can beat that?`}

@@ -365,6 +365,26 @@ test("explore: pick a field, open a niche role, follow it, and see its gaps", as
   await expect(page.getByRole("heading", { name: /Actuarial Analyst/ }).first()).toBeVisible();
 });
 
+test("explore: the Skills tab lists and filters skills and tools by field, separately from roles and companies", async ({ page }) => {
+  await onboardAsStudent(page);
+  await page.goto("/explore");
+  await page.getByRole("tab", { name: "Skills" }).click();
+  const skills = page.getByRole("list", { name: "Skills" });
+  const excelRow = skills.getByRole("listitem").filter({ hasText: "Excel" }).first();
+  await expect(excelRow).toBeVisible();
+  await expect(excelRow.getByText("Tool")).toBeVisible();
+
+  await page.getByPlaceholder("Search skills and tools").fill("excel");
+  await expect(skills.getByRole("listitem")).toHaveCount(4); // Excel, Process Excellence, and two FloorCOST Estimator for Excel tools
+  for (const text of await skills.getByRole("listitem").allTextContents()) {
+    expect(text.toLowerCase()).toContain("excel");
+  }
+
+  // The search box is shared across tabs, so switching to Roles keeps the same query applied.
+  await page.getByRole("tab", { name: "Roles" }).click();
+  await expect(page.getByPlaceholder(/Search job titles/)).toHaveValue("excel");
+});
+
 test("search finds roles, companies and skills from anywhere", async ({ page, isMobile }) => {
   await onboardAsStudent(page);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible(); // the shell (and its key handler) is mounted

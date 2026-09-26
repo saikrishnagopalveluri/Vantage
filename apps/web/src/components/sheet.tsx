@@ -30,7 +30,7 @@ export function Sheet({
       aria-labelledby="sheet-title"
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
-      className="fixed inset-x-0 bottom-0 top-auto m-0 max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-3xl border border-line bg-surface p-0 text-ink md:inset-auto md:m-auto md:max-w-lg md:rounded-3xl"
+      className="sheet fixed inset-x-0 bottom-0 top-auto m-0 max-h-[92dvh] w-full max-w-none overflow-y-auto rounded-t-3xl border border-line bg-surface p-0 text-ink md:inset-auto md:m-auto md:max-w-lg md:rounded-3xl"
     >
       {open && (
         <div className="pb-safe p-5 md:p-6">
