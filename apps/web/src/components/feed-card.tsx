@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import { timeAgo } from "@/lib/format";
 import { DomainBadge } from "@/lib/domains";
 import type { FeedItem, Tier } from "@/lib/types";
-import { BookmarkIcon, ChevronIcon, CloseIcon, ExternalIcon } from "./icons";
+import { BookmarkIcon, CheckIcon, ChevronIcon, CloseIcon, ExternalIcon, EyeIcon } from "./icons";
 import { ListenControls } from "./listen-controls";
 import { Button, Chip, cx } from "./ui";
 
@@ -38,11 +38,50 @@ interface Props {
   lead?: boolean;
   onSave: (item: FeedItem) => void;
   onDismiss: (item: FeedItem) => void;
+  /** The reader went through to the publisher's article. */
   onOpen: (item: FeedItem) => void;
+  /** The reader expanded the summary for the first time. */
+  onExpand?: (item: FeedItem) => void;
+}
+
+/** Which colour a card wears when more than one state applies: saved, then read, then opened. */
+function cardState(item: FeedItem): string | undefined {
+  if (item.saved) return "card-saved";
+  if (item.read) return "card-read";
+  if (item.opened) return "card-opened";
+  return undefined;
+}
+
+/** The state in words and an icon, so the colour is never the only signal. Read replaces opened. */
+function StateMarks({ item }: { item: FeedItem }) {
+  if (!item.saved && !item.read && !item.opened) return null;
+  return (
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs font-semibold">
+      {item.saved && (
+        <span className="inline-flex items-center gap-1 text-accent">
+          <BookmarkIcon width={14} height={14} filled />
+          Saved for later
+        </span>
+      )}
+      {item.read ? (
+        <span className="inline-flex items-center gap-1 text-good">
+          <CheckIcon width={14} height={14} />
+          Read
+        </span>
+      ) : (
+        item.opened && (
+          <span className="inline-flex items-center gap-1 text-opened">
+            <EyeIcon width={14} height={14} />
+            Opened
+          </span>
+        )
+      )}
+    </span>
+  );
 }
 
 /** Two short paragraphs and a few pointers from the publisher's own feed text. Hidden until asked for. */
-function Brief({ item }: { item: FeedItem }) {
+function Brief({ item, onOpen }: { item: FeedItem; onOpen: (item: FeedItem) => void }) {
   const brief = item.brief;
   if (!brief || (brief.paragraphs.length === 0 && brief.pointers.length === 0)) {
     return <p className="text-[15px] text-muted">The publisher didn&apos;t share more than the headline. Open the article to read it.</p>;
@@ -68,6 +107,7 @@ function Brief({ item }: { item: FeedItem }) {
         href={item.url}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => onOpen(item)}
         className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-accent underline underline-offset-4"
       >
         Read the full story at {item.source.name}
@@ -77,21 +117,31 @@ function Brief({ item }: { item: FeedItem }) {
   );
 }
 
-export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onOpen }: Props) {
+export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onOpen, onExpand }: Props) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const tags = [...item.matched.companies, ...item.matched.roles, ...item.matched.capabilities, ...item.matched.topics].slice(0, lead ? 6 : 4);
 
+  function toggleSummary() {
+    const next = !open;
+    setOpen(next);
+    // Only the first expand counts, and not at all once the story is already read.
+    if (next && !item.opened && !item.read) onExpand?.(item);
+  }
+
   return (
     <article
       style={{ "--n": index } as React.CSSProperties}
-      className={cx("rise raised rounded-2xl", lead ? "p-4 md:p-7" : "p-4 md:p-5")}
+      className={cx("rise raised rounded-2xl", cardState(item), lead ? "p-4 md:p-7" : "p-4 md:p-5")}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <RelevanceBadge score={item.score} tier={item.tier} />
-        {item.domains.slice(0, 2).map((d) => (
-          <DomainBadge key={d} name={d} />
-        ))}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <RelevanceBadge score={item.score} tier={item.tier} />
+          {item.domains.slice(0, 2).map((d) => (
+            <DomainBadge key={d} name={d} />
+          ))}
+        </div>
+        <StateMarks item={item} />
       </div>
       <p className="mt-2 text-xs text-muted">
         {item.newsletter && <span className="mr-1.5 rounded border border-line px-1.5 py-0.5 font-mono text-xs text-accent">Newsletter</span>}
@@ -129,7 +179,7 @@ export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onO
       <div className="mt-4">
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={toggleSummary}
           aria-expanded={open}
           aria-controls={panelId}
           className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-[15px] font-semibold text-accent"
@@ -138,7 +188,7 @@ export function FeedCard({ item, index = 0, lead = false, onSave, onDismiss, onO
           <ChevronIcon width={18} height={18} className={cx("transition-transform duration-300", open && "rotate-180")} />
         </button>
         <div id={panelId} role="region" aria-label="Summary" hidden={!open} className="rise mt-2 rounded-xl border border-line p-4">
-          {open && <Brief item={item} />}
+          {open && <Brief item={item} onOpen={onOpen} />}
         </div>
       </div>
 

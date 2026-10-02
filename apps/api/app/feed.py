@@ -200,19 +200,21 @@ def hydrate(db: Session, ctx: "Context", ids: set[str]) -> None:
 
 def _behaviour_signals(db: Session, user_id: str) -> Counter:
     """+ for tags on stories the reader saved or opened, - for tags on stories they dismissed."""
-    rows = db.execute(
-        select(UserInteraction.article_id, UserInteraction.action)
-        .where(UserInteraction.user_id == user_id)
-        .order_by(UserInteraction.created_at.desc())
-        .limit(300)
-    ).all()
-    if not rows:
-        return Counter()
     value = {
         InteractionAction.SAVED: SAVED_SIGNAL,
         InteractionAction.READ: READ_SIGNAL,
         InteractionAction.DISMISSED: -1.0,
     }
+    # OPENED only drives the "opened" colour on the card. It is left out here so it neither needs a
+    # weight nor crowds older saves and dismissals out of the 300-row window.
+    rows = db.execute(
+        select(UserInteraction.article_id, UserInteraction.action)
+        .where(UserInteraction.user_id == user_id, UserInteraction.action.in_(list(value)))
+        .order_by(UserInteraction.created_at.desc())
+        .limit(300)
+    ).all()
+    if not rows:
+        return Counter()
     per_article: dict[str, float] = {}
     for article_id, action in rows:
         per_article[article_id] = per_article.get(article_id, 0.0) + value[action]

@@ -52,6 +52,10 @@ export interface FeedItem {
   matched: { companies: string[]; roles: string[]; industries: string[]; capabilities: string[]; topics: string[] };
   domains: string[];
   saved: boolean;
+  /** Went through to the publisher's article. */
+  read?: boolean;
+  /** Expanded the summary here without going to the publisher. */
+  opened?: boolean;
   newsletter?: boolean;
 }
 

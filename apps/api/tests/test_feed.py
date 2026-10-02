@@ -113,6 +113,35 @@ def test_save_is_idempotent_and_shows_in_feed_and_saved_list(client, feed_world)
     assert client.get("/feed/u1/saved", headers=as_user("u1")).json() == []
 
 
+def test_read_opened_and_saved_are_reported_per_item_and_independent_of_each_other(client, feed_world):
+    target = article_id(client, "hul")
+    state = lambda body, article=target: next(i for i in body["items"] if i["id"] == article)  # noqa: E731
+
+    fresh = state(fetch(client))
+    assert (fresh["read"], fresh["opened"], fresh["saved"]) == (False, False, False)
+
+    assert act(client, target, "open").status_code == 200
+    opened = state(fetch(client))
+    assert (opened["read"], opened["opened"], opened["saved"]) == (False, True, False)
+
+    act(client, target, "read")
+    act(client, target, "save")
+    both = state(fetch(client))
+    assert (both["read"], both["opened"], both["saved"]) == (True, True, True)
+
+    # Another reader's state, and another story's, are untouched.
+    others = [i for i in fetch(client)["items"] if i["id"] != target]
+    assert all((i["read"], i["opened"], i["saved"]) == (False, False, False) for i in others)
+
+
+def test_opening_summaries_neither_breaks_nor_reorders_the_feed(client, feed_world):
+    # OPENED has no ranking weight: a feed full of opened stories must still load, in the same order.
+    before = urls(fetch(client))
+    for slug in before:
+        assert act(client, article_id(client, slug), "open").status_code == 200
+    assert urls(fetch(client)) == before
+
+
 def test_a_dismissed_article_stays_in_saved(client, feed_world):
     target = article_id(client, "hul")
     act(client, target, "save")

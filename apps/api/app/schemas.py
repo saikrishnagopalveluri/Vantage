@@ -229,6 +229,8 @@ class FeedItem(BaseModel):
     matched: dict[str, list[str]]
     domains: list[str]
     saved: bool
+    read: bool = False  # the reader went through to the publisher's article
+    opened: bool = False  # the reader expanded the summary here
     newsletter: bool = False  # from a newsletter rather than a news site
 
     @field_validator("published_at")
@@ -255,7 +257,7 @@ class FeedOut(BaseModel):
 
 class InteractionIn(BaseModel):
     article_id: str
-    action: Literal["save", "unsave", "dismiss", "undismiss", "read"]
+    action: Literal["save", "unsave", "dismiss", "undismiss", "read", "open"]
 
 
 class InteractionOut(BaseModel):

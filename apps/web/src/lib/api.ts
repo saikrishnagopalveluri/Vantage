@@ -152,7 +152,7 @@ export const api = {
   skillGaps: (userId: string, signal?: AbortSignal) => request<SkillGaps>(`/profile/${userId}/skill-gaps`, { signal }),
   feed: (userId: string, lens: Lens, offset: number, domainId?: string | null, signal?: AbortSignal, asOf?: string) =>
     request<Feed>(`/feed/${userId}${qs({ lens, offset, limit: 20, domain_id: domainId, as_of: asOf })}`, { signal }),
-  interact: (userId: string, articleId: string, action: "save" | "unsave" | "dismiss" | "undismiss" | "read") =>
+  interact: (userId: string, articleId: string, action: "save" | "unsave" | "dismiss" | "undismiss" | "read" | "open") =>
     request<{ article_id: string; saved: boolean; dismissed: boolean }>(`/feed/${userId}/interaction`, {
       method: "POST",
       body: { article_id: articleId, action },

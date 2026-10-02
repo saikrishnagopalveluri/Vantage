@@ -193,6 +193,19 @@ export default function FeedPage() {
     }
   }
 
+  // Both update the card straight away; the request is best-effort, a failed one only means the
+  // colour is gone after the next refresh.
+  function markRead(item: FeedItem) {
+    if (item.read) return;
+    patch(item.id, { read: true });
+    void api.interact(userId, item.id, "read").catch(() => {});
+  }
+
+  function markOpened(item: FeedItem) {
+    patch(item.id, { opened: true });
+    void api.interact(userId, item.id, "open").catch(() => {});
+  }
+
   async function dismiss(item: FeedItem) {
     setState((s) => ({ ...s, items: s.items.filter((i) => i.id !== item.id) }));
     try {
@@ -309,7 +322,7 @@ export default function FeedPage() {
             )
           ) : (
             <>
-              {lead && <FeedCard key={lead.id} item={lead} lead onSave={toggleSave} onDismiss={dismiss} onOpen={(i) => void api.interact(userId, i.id, "read").catch(() => {})} />}
+              {lead && <FeedCard key={lead.id} item={lead} lead onSave={toggleSave} onDismiss={dismiss} onOpen={markRead} onExpand={markOpened} />}
               {rest.map((item, i) => (
                 <FeedCard
                   key={item.id}
@@ -317,7 +330,8 @@ export default function FeedPage() {
                   index={i + 1}
                   onSave={toggleSave}
                   onDismiss={dismiss}
-                  onOpen={(it) => void api.interact(userId, it.id, "read").catch(() => {})}
+                  onOpen={markRead}
+                  onExpand={markOpened}
                 />
               ))}
               <div ref={sentinel} className="flex justify-center pt-2">

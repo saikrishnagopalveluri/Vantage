@@ -13,6 +13,8 @@
   --accent-soft: #fbead0;
   --good: #2f6b3a;
   --good-soft: #e3f0e3;
+  --opened: #1f5f94;
+  --opened-soft: #e2eef8;
   --shadow: 29 26 22;
   color-scheme: light;
 
@@ -31,6 +33,8 @@
     --accent-soft: #3a2a10;
     --good: #7fc48a;
     --good-soft: #1c2e1f;
+    --opened: #7db8ec;
+    --opened-soft: #13283b;
     --shadow: 0 0 0;
     color-scheme: dark;
 
@@ -49,6 +53,8 @@
   --accent-soft: #3a2a10;
   --good: #7fc48a;
   --good-soft: #1c2e1f;
+  --opened: #7db8ec;
+  --opened-soft: #13283b;
   --shadow: 0 0 0;
   color-scheme: dark;
 
@@ -66,6 +72,8 @@
   --color-accent-soft: var(--accent-soft);
   --color-good: var(--good);
   --color-good-soft: var(--good-soft);
+  --color-opened: var(--opened);
+  --color-opened-soft: var(--opened-soft);
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-sans: var(--font-source), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-plex), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -157,6 +165,22 @@ dialog[open]::backdrop { opacity: 1; }
 .raised {
   background: var(--surface);
   border: 1px solid var(--line);
+}
+
+/* A story's state as a hairline edge and a faint tint: blue opened, green read, amber saved. The
+   words on the card say the same thing, so colour is never the only signal. Where more than one
+   applies the card wears the strongest: saved, then read, then opened. */
+.card-opened {
+  border-color: color-mix(in srgb, var(--opened) 60%, var(--line));
+  background: color-mix(in srgb, var(--opened) 8%, var(--surface));
+}
+.card-read {
+  border-color: color-mix(in srgb, var(--good) 45%, var(--line));
+  background: color-mix(in srgb, var(--good) 5%, var(--surface));
+}
+.card-saved {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
 }
 
 /* Buttons are flat and sink one pixel when pressed. */

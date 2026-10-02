@@ -364,7 +364,8 @@ class ArticleTag(Base):
 class InteractionAction(str, enum.Enum):
     SAVED = "saved"
     DISMISSED = "dismissed"
-    READ = "read"
+    READ = "read"  # went through to the publisher's article
+    OPENED = "opened"  # expanded the summary in the app, did not go to the publisher
 
 
 class UserInteraction(Base):

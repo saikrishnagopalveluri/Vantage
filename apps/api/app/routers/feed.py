@@ -27,6 +27,7 @@ ACTION_TO_INTERACTION = {
     "dismiss": (InteractionAction.DISMISSED, True),
     "undismiss": (InteractionAction.DISMISSED, False),
     "read": (InteractionAction.READ, True),
+    "open": (InteractionAction.OPENED, True),
 }
 
 
@@ -78,15 +79,17 @@ def get_feed(
     ranked = rank(db, profile, load_context(db, profile), lens, now=now, domain_id=domain_id)
 
     page = ranked[offset : offset + limit]
-    saved = set(
-        db.scalars(
-            select(UserInteraction.article_id).where(
-                UserInteraction.user_id == user_id,
-                UserInteraction.action == InteractionAction.SAVED,
-                UserInteraction.article_id.in_([r.article.id for r in page]),
-            )
+    # One query for all three card states, so colour-coding the page costs no extra round trip.
+    state: dict[InteractionAction, set[str]] = {a: set() for a in (InteractionAction.SAVED, InteractionAction.READ, InteractionAction.OPENED)}
+    for article_id, action in db.execute(
+        select(UserInteraction.article_id, UserInteraction.action).where(
+            UserInteraction.user_id == user_id,
+            UserInteraction.action.in_(list(state)),
+            UserInteraction.article_id.in_([r.article.id for r in page]),
         )
-    )
+    ):
+        state[action].add(article_id)
+    saved, read, opened = state[InteractionAction.SAVED], state[InteractionAction.READ], state[InteractionAction.OPENED]
     count = lambda tier: sum(1 for r in ranked if r.tier == tier)  # noqa: E731
     return FeedOut(
         lens=lens,
@@ -114,6 +117,8 @@ def get_feed(
                 domains=r.domains,
                 newsletter=r.newsletter,
                 saved=r.article.id in saved,
+                read=r.article.id in read,
+                opened=r.article.id in opened,
             )
             for r in page
         ],

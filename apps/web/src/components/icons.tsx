@@ -40,6 +40,12 @@ export const CheckIcon = (p: P) => (
     <path d="M5 12.5l4.5 4.5L19 7.5" />
   </svg>
 );
+export const EyeIcon = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" />
+    <circle cx="12" cy="12" r="2.75" />
+  </svg>
+);
 export const CloseIcon = (p: P) => (
   <svg {...base(p)}>
     <path d="M6 6l12 12M18 6L6 18" />
