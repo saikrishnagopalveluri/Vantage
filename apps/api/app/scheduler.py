@@ -9,12 +9,17 @@ Two ways to run it, and both are safe to use together:
 Runs are recorded in `ingest_runs` (feeds) and `notification_runs` (push), so a restart doesn't
 repeat a run that just happened and two processes never do the same work twice.
 
-  VANTAGE_INGEST_EVERY_MINUTES     how often to pull the feeds (default 60)
-  VANTAGE_DAILY_HOUR_UTC           hour of the day for the daily clean-up (default 3)
-  VANTAGE_STREAK_REMINDER_HOUR_UTC hour of the day for the streak-at-risk push (default 14)
-  VANTAGE_NEWS_ALERT_HOUR_UTC      hour of the day for the best-critical-story push (default 15)
-  VANTAGE_ENTITY_UPDATES_HOUR_UTC  hour of the day for the role/company update push (default 16)
-  VANTAGE_GAMES_NUDGE_EVERY_DAYS   how often to check for inactive players to nudge (default 3)
+  VANTAGE_INGEST_EVERY_MINUTES       how often to pull the feeds (default 60)
+  VANTAGE_DAILY_HOUR_UTC             hour of the day for the daily clean-up (default 3)
+  VANTAGE_STREAK_REMINDER_EVERY_HOURS  minimum gap between streak-at-risk pushes (default 4; fired
+                                        up to 3x/day by the GitHub Actions schedule, but only to a
+                                        reader who still hasn't opened the app that day — opening it
+                                        updates last_active_on and drops them out of the next run)
+  VANTAGE_NEWS_ALERT_EVERY_HOURS      minimum gap between best-critical-story pushes (default 6;
+                                       fired up to 2x/day)
+  VANTAGE_ENTITY_UPDATES_HOUR_UTC     hour of the day for the role/company update push (default 16,
+                                       once a day)
+  VANTAGE_GAMES_NUDGE_EVERY_DAYS      how often to check for inactive players to nudge (default 1)
 """
 
 import logging
@@ -234,8 +239,8 @@ class Scheduler:
         *,
         every_minutes: int | None = None,
         daily_hour: int | None = None,
-        streak_reminder_hour: int | None = None,
-        news_alert_hour: int | None = None,
+        streak_reminder_every_hours: int | None = None,
+        news_alert_every_hours: int | None = None,
         entity_updates_hour: int | None = None,
         games_nudge_every_days: int | None = None,
         ingest: Callable[[Session], dict[str, int]] = run_all,
@@ -243,17 +248,20 @@ class Scheduler:
         self.session_factory = session_factory
         self.every = timedelta(minutes=every_minutes or int(os.getenv("VANTAGE_INGEST_EVERY_MINUTES", "60")))
         self.daily_hour = daily_hour if daily_hour is not None else int(os.getenv("VANTAGE_DAILY_HOUR_UTC", "3"))
-        # Default 14:00 UTC ~= 7:30pm IST: late enough that "you haven't opened it today" is true and
-        # relevant, early enough that it isn't a middle-of-the-night ping for the app's India-hours base.
-        self.streak_reminder_hour = (
-            streak_reminder_hour if streak_reminder_hour is not None else int(os.getenv("VANTAGE_STREAK_REMINDER_HOUR_UTC", "14"))
+        # A minimum gap rather than a fixed hour, so this can fire more than once a day: the GitHub
+        # Actions schedule decides the actual times of day, this just stops a retry/manual dispatch
+        # from sending twice for the same slot. send_streak_reminders() is what actually enforces
+        # "only if they haven't opened the app today" — this gate is purely about send frequency.
+        self.streak_reminder_every = timedelta(
+            hours=streak_reminder_every_hours or int(os.getenv("VANTAGE_STREAK_REMINDER_EVERY_HOURS", "4"))
         )
-        # Spread the other daily pushes across the evening so a reader isn't pinged four times back to back.
-        self.news_alert_hour = news_alert_hour if news_alert_hour is not None else int(os.getenv("VANTAGE_NEWS_ALERT_HOUR_UTC", "15"))
+        self.news_alert_every = timedelta(hours=news_alert_every_hours or int(os.getenv("VANTAGE_NEWS_ALERT_EVERY_HOURS", "6")))
+        # entity_updates stays once-a-day at a fixed hour: there's no "stops once they've seen it"
+        # per-article gate the way streak/news have, so firing it more than once would repeat itself.
         self.entity_updates_hour = (
             entity_updates_hour if entity_updates_hour is not None else int(os.getenv("VANTAGE_ENTITY_UPDATES_HOUR_UTC", "16"))
         )
-        self.games_nudge_every = timedelta(days=games_nudge_every_days or int(os.getenv("VANTAGE_GAMES_NUDGE_EVERY_DAYS", "3")))
+        self.games_nudge_every = timedelta(days=games_nudge_every_days or int(os.getenv("VANTAGE_GAMES_NUDGE_EVERY_DAYS", "1")))
         self.ingest = ingest
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -264,8 +272,8 @@ class Scheduler:
         with self.session_factory() as db:
             daily = is_due(db, "daily", now, daily_hour=self.daily_hour)
             hourly = is_due(db, "hourly", now, every=self.every)
-            streak_reminder = is_notification_due(db, "streak_reminder", now, self.streak_reminder_hour)
-            news_alert = is_notification_due(db, "news_alert", now, self.news_alert_hour)
+            streak_reminder = is_notification_due_every(db, "streak_reminder", now, self.streak_reminder_every)
+            news_alert = is_notification_due_every(db, "news_alert", now, self.news_alert_every)
             entity_updates = is_notification_due(db, "entity_updates", now, self.entity_updates_hour)
             games_nudge = is_notification_due_every(db, "games_nudge", now, self.games_nudge_every)
         ran = []
@@ -296,11 +304,11 @@ class Scheduler:
             self._thread.start()
             log.info(
                 "scheduler started: feeds every %s, daily clean-up at %02d:00 UTC, "
-                "streak reminders at %02d:00, news alerts at %02d:00, entity updates at %02d:00 UTC, games nudge every %s",
+                "streak reminders every %s, news alerts every %s, entity updates at %02d:00 UTC, games nudge every %s",
                 self.every,
                 self.daily_hour,
-                self.streak_reminder_hour,
-                self.news_alert_hour,
+                self.streak_reminder_every,
+                self.news_alert_every,
                 self.entity_updates_hour,
                 self.games_nudge_every,
             )
@@ -330,19 +338,17 @@ if __name__ == "__main__":
         }
         if kind in notification_runners:
             # Same due-check tick() uses, so a workflow re-run (retry, manual dispatch the same
-            # day) can't double-send — --once used to skip straight to sending, unconditionally.
+            # slot) can't double-send — --once used to skip straight to sending, unconditionally.
             now = datetime.now(timezone.utc)
-            hour_env = {
-                "streak_reminder": "VANTAGE_STREAK_REMINDER_HOUR_UTC",
-                "news_alert": "VANTAGE_NEWS_ALERT_HOUR_UTC",
-                "entity_updates": "VANTAGE_ENTITY_UPDATES_HOUR_UTC",
-            }
             with SessionLocal() as db:
                 if kind == "games_nudge":
-                    due = is_notification_due_every(db, kind, now, timedelta(days=int(os.getenv("VANTAGE_GAMES_NUDGE_EVERY_DAYS", "3"))))
-                else:
-                    default_hour = {"streak_reminder": "14", "news_alert": "15", "entity_updates": "16"}[kind]
-                    due = is_notification_due(db, kind, now, int(os.getenv(hour_env[kind], default_hour)))
+                    due = is_notification_due_every(db, kind, now, timedelta(days=int(os.getenv("VANTAGE_GAMES_NUDGE_EVERY_DAYS", "1"))))
+                elif kind == "streak_reminder":
+                    due = is_notification_due_every(db, kind, now, timedelta(hours=int(os.getenv("VANTAGE_STREAK_REMINDER_EVERY_HOURS", "4"))))
+                elif kind == "news_alert":
+                    due = is_notification_due_every(db, kind, now, timedelta(hours=int(os.getenv("VANTAGE_NEWS_ALERT_EVERY_HOURS", "6"))))
+                else:  # entity_updates: still once a day, at a fixed hour
+                    due = is_notification_due(db, kind, now, int(os.getenv("VANTAGE_ENTITY_UPDATES_HOUR_UTC", "16")))
             if not due:
                 print(f"{kind}: not due yet")
             else:

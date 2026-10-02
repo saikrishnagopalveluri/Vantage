@@ -160,10 +160,10 @@ The API pulls every feed once an hour and runs a clean-up once a day, on its own
 | `VANTAGE_SCHEDULER` | `1` | `0` turns the built-in scheduler off (use this if you run the scheduler as its own process) |
 | `VANTAGE_INGEST_EVERY_MINUTES` | `60` | How often to pull feeds |
 | `VANTAGE_DAILY_HOUR_UTC` | `3` | Hour of the daily clean-up |
-| `VANTAGE_STREAK_REMINDER_HOUR_UTC` | `14` | Hour of the streak-at-risk push |
-| `VANTAGE_NEWS_ALERT_HOUR_UTC` | `15` | Hour of the best-critical-story push |
-| `VANTAGE_ENTITY_UPDATES_HOUR_UTC` | `16` | Hour of the role/company update push |
-| `VANTAGE_GAMES_NUDGE_EVERY_DAYS` | `3` | How often to check for inactive players to nudge |
+| `VANTAGE_STREAK_REMINDER_EVERY_HOURS` | `4` | Minimum gap between streak-at-risk pushes (fired up to 3x/day; stops once the reader opens the app that day) |
+| `VANTAGE_NEWS_ALERT_EVERY_HOURS` | `6` | Minimum gap between best-critical-story pushes (fired up to 2x/day, score >= 70) |
+| `VANTAGE_ENTITY_UPDATES_HOUR_UTC` | `16` | Hour of the role/company update push (once a day) |
+| `VANTAGE_GAMES_NUDGE_EVERY_DAYS` | `1` | How often to check for inactive players to nudge |
 
 ```bash
 .venv/Scripts/python -m app.scheduler                          # run the scheduler as its own process
